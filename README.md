@@ -1,6 +1,7 @@
 # PicSearcher
 
 PicSearcher is a web-based application built using Flask and TailwindCSS. This project allows users to search for images based on keywords.
+Refer to the [Installation](#installation) section for instructions on how to set up the project on your local machine.
 
 ## Features
 
