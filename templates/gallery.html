@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+
+<head>
+    <title>相册</title>
+    <link href="../static/css/main.css" rel="stylesheet">
+    <!-- <link href="{{url_for('static',filename='css/main.css')}}" rel="stylesheet"> -->
+    <link rel="shortcut icon" href="../static/imgs/gallery.svg" type="image/x-icon">
+    <style>
+        @keyframes zoom {
+            from {
+                transform: scale(0)
+            }
+
+            to {
+                transform: scale(1)
+            }
+        }
+
+        /* 关闭按钮样式 */
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* 响应式调整 */
+
+        @media only screen and (max-width: 700px) {
+            .modal-content {
+                width: 100%;
+            }
+        }
+
+        .tags {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .tag {
+            display: inline-block;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        html,
+        body {
+            height: 100%;
+            /* 设置高度为100% */
+        }
+
+        /* Hide scrollbar arrows */
+
+        /* Scrollbar track */
+
+        ::-webkit-scrollbar-track {
+            background-color: transparent;
+            /* Transparent track background */
+        }
+
+        /* Scrollbar thumb (the draggable part) */
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(103, 103, 103, 0.721);
+            /* Semi-transparent thumb */
+            border-radius: 10px;
+            /* Rounded corners */
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            /* Set scrollbar width */
+            background-color: transparent;
+            /* Transparent background for scrollbar */
+        }
+
+        /* Hide scrollbar arrows */
+
+        ::-webkit-scrollbar-button {
+            display: none;
+            /* Hide the up and down arrows */
+        }
+
+        /* 隐藏滚动条但保留占位 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+            /* 隐藏滚动条 */
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            /* IE和Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 font-sans_light dark:font-sans_light smooth--trans flex flex-col">
+    <script>
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+        }
+    </script>
+    <!--nav bar-->
+    {% include './modules/navBar.html' %}
+    {%if not ingallery%}
+    <!--show galleries-->
+    <div class="flex-grow px-5 smooth--trans">
+        <div class="flex-grow smooth--trans px-8 py-8 my-28 max-w-none">
+            <div class="flex flex-wrap -mx-4">
+                {% if galleries %}
+                {% for gallery in galleries %}
+                <div class="w-1/2 md:w-1/4 xl:w-1/6 px-4 mb-8 group smooth--trans">
+                    <div
+                        class="aspect-square rounded-lg overflow-hidden shadow-lg dark:shadow-md dark:shadow-zinc-500 smooth--trans cursor-pointer hover:opacity-75">
+                        <a href="{{ url_for('into_gallery', gallery_name=gallery) }}">
+                            <img src="{{ url_for('get_gallery_cover', gallery_name=gallery) }}" loading="lazy"
+                                class="object-cover w-full h-full">
+                        </a>
+                    </div>
+                    <div class="mt-2 text-lg font-bold text-center w-auto">
+                        <a href="{{ url_for('into_gallery', gallery_name=gallery) }}">
+                            <span
+                                class="cursor-pointer  smooth--trans text-gray-600 dark:text-gray-400 hover:underline hover:text-gray-500 dark:hover:text-gray-300">{{gallery}}</span>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {%else%}
+    <!--show images in gallery-->
+    {% if images %}
+    <div class="relative items-center top-20">
+        <div class="flex flex-col items-center justify-center cursor-default">
+            <p
+                class="text-4xl font-light font-sans_light text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-gray-200 smooth--trans">
+                {{gallery_name}}</p>
+            <p
+                class="text-4xl font-bold  text-gray-800 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 smooth--trans">
+                共{{total_count}}张</p>
+        </div>
+    </div>
+    {% endif %}
+    {% if not phoneua %}
+    <div class="flex-grow px-5 smooth--trans">
+        <div class="container px-8 py-8 my-28 max-w-none">
+            {% if images %}
+            <div id="image_grid"
+                class="grid xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 place-items-center">
+                {% for image in images %}
+                <!-- reuse the template -->
+                {% include './modules/imageCard.html' %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Display "No Results" when no images found -->
+            <div class="flex flex-col items-center justify-center text-center">
+                <p class="text-2xl font-semibold text-gray-600 dark:text-gray-300">对于给定的关键字"{{init_tags}}"无结果</p>
+                <a href="{{ url_for('index') }}"
+                    class="mt-4 px-6 py-2 text-white bg-blue-500 hover:bg-blue-600 rounded-full smooth--trans">
+                    返回
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <!-- phone ui -->
+    <div class="flex-grow px-5 py-32">
+        <div class="grid-container">
+            {% if images %}
+            {% for image in images %}
+            <div class="grid-item">
+                <a href="{{ url_for('get_original_image', image_hash=image.filehash) }}">
+                    <img src="{{ url_for('get_image', image_hash=image.filehash) }}" alt="Image"
+                        class="rounded-3xl h-auto w-full " loading="lazy" />
+                </a>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    <footer class="flex flex-col items-center p-4 backdrop-blur-sm">
+        <!-- Pagination -->
+        {% if not ingallery %}
+        <div class="ml-4 flex font-semibold">
+            {% if current_page > 1 %}
+            <a href="{{ url_for('gallery', page=current_page-1) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">上一页</a>
+            {% endif %}
+            {% if total_pages > 5 %}
+            {% if current_page > 3 %}
+            <a href="{{ url_for('gallery', page=1) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">1</a>
+            {% if current_page > 4 %}
+            <span class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
+            {% endif %}
+            {% endif %}
+            {% for page_num in range(start_page, end_page + 1) %}
+            <a href="{{ url_for('gallery', page=page_num) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{
+                page_num }}</a>
+            {% endfor %}
+            {% if current_page < total_pages - 2 %} {% if current_page < total_pages - 3 %} <span
+                class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
+                {% endif %}
+                <a href="{{ url_for('gallery', page=total_pages) }}"
+                    class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ total_pages }}</a>
+                {% endif %}
+
+                {% else %}
+                {% for page_num in range(1, total_pages + 1) %}
+                {% if page_num == current_page %}
+                <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded cursor-default">{{ page_num }}</div>
+                {% else %}
+                <a href="{{ url_for('gallery',gallery_name=gallery_name, page=page_num) }}"
+                    class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ page_num }}</a>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+                {% if current_page < total_pages %} <a href="{{ url_for('gallery', page=current_page+1) }}"
+                    class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">下一页</a>
+                    {% endif %}
+
+        </div>
+        <!-- Jump to page input -->
+        {% if total_pages > 1 %}
+        <form action="{{ url_for('gallery') }}" method="get" class="ml-4 mt-2">
+            <input type="number" name="page" min="1" max="{{ total_pages }}" value="{{ current_page }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded" style="width: 60px;">
+            <button type="submit" class="px-3 py-1 bg-gray-200 rounded hover:bg-blue-300">Go</button>
+        </form>
+        {% endif %}
+        {% else %}
+        <div class="ml-4 flex font-semibold">
+            {% if current_page > 1 %}
+            <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=current_page-1) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">上一页</a>
+            {% endif %}
+
+            {% if total_pages > 5 %} <!--if1-->
+            {% if current_page > 2 %} <!--if2-->
+            <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=1) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">1</a>
+            {% if current_page > 3 %} <!--if3-->
+            <span class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
+            {% endif %} <!--if3-->
+            {% endif %} <!--if2-->
+            {% for page_num in range(start_page, end_page + 1) %}
+            {% if page_num == current_page %}
+            <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
+            {% else %}
+            <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=page_num) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{
+                page_num }}</a>
+            {% endif %}
+            {% endfor %}
+            <!--if4-->
+            {% if current_page < total_pages - 2 %} <!--if5-->
+                {% if current_page < total_pages - 3 %} <span class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
+                    {% endif %}<!--if5-->
+                    <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=total_pages) }}"
+                        class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ total_pages }}</a>
+                    {% endif %} <!--if4-->
+                    {% else %} <!--if1-->
+                    {% for page_num in range(1, total_pages + 1) %}
+                    {% if page_num == current_page %}
+                    <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
+                    {% else %}
+                    <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=page_num) }}"
+                        class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ page_num }}</a>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %} <!--if1-->
+
+                    {% if current_page < total_pages %} <a
+                        href="{{ url_for('into_gallery',gallery_name=gallery_name, page=current_page+1) }}"
+                        class="px-3 py-1 mx-1 rounded bg-gray-200  hover:bg-blue-300">下一页</a>
+                        {% endif %}
+
+        </div>
+        <!-- Jump to page input -->
+        {% if total_pages > 1 %}
+        <form action="{{ url_for('into_gallery' ,gallery_name=gallery_name)}}" method="get" class="ml-4 mt-2">
+            <input type="number" name="page" min="1" max="{{ total_pages }}" value="{{ current_page }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded" style="width: 60px;">
+            <button type="submit" class="px-3 py-1 bg-gray-200 rounded hover:bg-blue-300">Go</button>
+        </form>
+        {% endif %}
+        {% endif %}
+
+        <!-- Copyright -->
+        <div class="mt-2">
+            <a href="#" class="text-gray-400 font-semibold hover:underline hover:text-blue-400">© M1NG</a>
+        </div>
+    </footer>
+    <div id="myModal" class="modal" onclick="closeModal(event)">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div id="tagsContainer" class="tags"></div>
+    </div>
+    <script src="../static/js/global.js"></script>
+    <script>
+        let scale = 1; // 初始化缩放比例
+        const modalImage = document.getElementById("modalImage");
+
+        // 打开模态框，加载原图
+        function openModal(imageSrc, imageHash) {
+            var modal = document.getElementById("myModal");
+            modal.style.display = "block";
+            modalImage.src = imageSrc;
+            scale = 1; // 每次打开时重置缩放比例
+            modalImage.style.transform = `scale(${scale})`;
+
+            // 获取并显示图片标签
+            fetch(`/get_image_tags/${imageHash}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tagsContainer = document.getElementById("tagsContainer");
+                    tagsContainer.innerHTML = ''; // 清空之前的标签
+                    if (data.tags && data.tags.length > 0) {
+                        data.tags.forEach(tag => {
+                            let tagElement = document.createElement("span");
+                            tagElement.classList.add("tag");
+                            tagElement.innerText = tag;
+                            tagsContainer.appendChild(tagElement);
+                        });
+                    } else {
+                        tagsContainer.innerText = '无标签';
+                    }
+                })
+                .catch(error => console.error('Error fetching tags:', error));
+        }
+
+        // 关闭模态框
+        function closeModal(event) {
+            var modal = document.getElementById("myModal");
+            if (event.target === modal || event.target.classList.contains('close')) {
+                modal.style.display = "none";
+            }
+        }
+
+        // 图片缩放功能 (监听滚轮事件)
+        modalImage.addEventListener('wheel', function (event) {
+            event.preventDefault(); // 防止页面滚动
+            if (event.deltaY < 0) {
+                // 滚轮向上滚动，放大图片
+                scale += 0.1;
+            } else {
+                // 滚轮向下滚动，缩小图片
+                scale = Math.max(0.1, scale - 0.1); // 防止缩小到0以下
+            }
+            modalImage.style.transform = `scale(${scale})`;
+        });
+    </script>
+
+</body>
+
+</html>

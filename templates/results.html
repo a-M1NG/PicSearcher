@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+
+<head>
+    <title>搜索结果</title>
+    <!-- <link href="{{url_for('static',filename='css/main.css')}}" rel="stylesheet"> -->
+    <link href="../static/css/main.css" rel="stylesheet">
+    <link rel="shortcut icon" href="../static/imgs/search.svg" type="image/x-icon">
+    <style>
+        @keyframes zoom {
+            from {
+                transform: scale(0)
+            }
+
+            to {
+                transform: scale(1)
+            }
+        }
+
+        /* 关闭按钮样式 */
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* 响应式调整 */
+
+        @media only screen and (max-width: 700px) {
+            .modal-content {
+                width: 100%;
+            }
+        }
+
+        .tags {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .tag {
+            display: inline-block;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        html,
+        body {
+            height: 100%;
+            /* 设置高度为100% */
+        }
+
+        body {
+            display: flex;
+            /* 使用Flexbox */
+            flex-direction: column;
+            /* 垂直方向布局 */
+        }
+
+        .flex-grow {
+            flex-grow: 1;
+        }
+
+        /* Hide scrollbar arrows */
+
+        /* Scrollbar track */
+
+        ::-webkit-scrollbar-track {
+            background-color: transparent;
+            /* Transparent track background */
+        }
+
+        /* Scrollbar thumb (the draggable part) */
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(103, 103, 103, 0.721);
+            /* Semi-transparent thumb */
+            border-radius: 10px;
+            /* Rounded corners */
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            /* Set scrollbar width */
+            background-color: transparent;
+            /* Transparent background for scrollbar */
+        }
+
+        /* Hide scrollbar arrows */
+
+        ::-webkit-scrollbar-button {
+            display: none;
+            /* Hide the up and down arrows */
+        }
+
+        /* 隐藏滚动条但保留占位 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+            /* 隐藏滚动条 */
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            /* IE和Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 font-sans_light dark:font-sans_light smooth--trans">
+    <!--nav bar-->
+    {% include './modules/navBar.html' %}
+    {% if images %}
+    <div class="relative flex-grow items-center top-20">
+        <div class="flex items-center justify-center">
+            <p
+                class="text-4xl font-bold  text-gray-800 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 smooth--trans">
+                找到{{total_count}}个结果</p>
+        </div>
+    </div>
+    {% endif %}
+    {% if not phoneua %}
+    <div class="flex-grow px-5 smooth--trans">
+        <div class="container px-8 py-8 my-28 max-w-none">
+            {% if images %}
+            <div class="grid xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 place-items-center">
+                {% for image in images %}
+                <!-- reuse the template -->
+                {% include './modules/imageCard.html' %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Display "No Results" when no images found -->
+            <div class="flex flex-col items-center justify-center text-center">
+                <p class="text-2xl font-semibold text-gray-600 dark:text-gray-300">对于给定的关键字"{{init_tags}}"无结果</p>
+                <a href="{{ url_for('index') }}"
+                    class="mt-4 px-6 py-2 text-white bg-blue-500 hover:bg-blue-600 rounded-full smooth--trans">
+                    返回
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="flex-grow px-5 py-32">
+        <div class="grid-container">
+            {% if images %}
+            {% for image in images %}
+            <div class="grid-item">
+                <a href="{{ url_for('get_original_image', image_hash=image.filehash) }}">
+                    <img src="{{ url_for('get_image', image_hash=image.filehash) }}" alt="Image"
+                        class="rounded-lg h-auto w-full " />
+                </a>
+            </div>
+            {% endfor %}
+            {% else %}
+            <!-- Display "No Results" when no images found -->
+            <div class="flex flex-col items-center justify-center text-center">
+                <p class="text-2xl font-semibold text-gray-600 dark:text-gray-300">对于给定的关键字"{{init_tags}}"无结果</p>
+                <a href="{{ url_for('index') }}"
+                    class="mt-4 px-6 py-2 text-white bg-blue-500 hover:bg-blue-600 rounded-full smooth--trans">
+                    返回
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    <footer class="flex flex-col items-center p-4 backdrop-blur-sm">
+        {% if images %}
+        <div class="ml-4 flex font-semibold">
+            {% if current_page > 1 %}
+            <a href="{{ url_for('search', page=current_page-1) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">上一页</a>
+            {% endif %}
+            {% if total_pages > 5 %}
+            {% if current_page > 2 %}
+            <a href="{{ url_for('search', page=1) }}" class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">1</a>
+            {% if current_page > 3 %}
+            <span class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
+            {% endif %}
+            {% endif %}
+            {% for page_num in range(start_page, end_page + 1) %}
+            {% if page_num == current_page %}
+            <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
+            {% else %}
+            <a href="{{ url_for('search', page=page_num) }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{
+                page_num }}</a>
+            {% endif %}
+            {% endfor %}
+            {% if current_page < total_pages - 2 %} {% if current_page < total_pages - 3 %} <span
+                class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
+                {% endif %}
+                <a href="{{ url_for('search', page=total_pages) }}"
+                    class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ total_pages }}</a>
+                {% endif %}
+                {% else %}
+                {% for page_num in range(1, total_pages + 1) %}
+                {% if page_num == current_page %}
+                <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
+                {% else %}
+                <a href="{{ url_for('search', page=page_num) }}"
+                    class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ page_num }}</a>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+                {% if current_page < total_pages %} <a href="{{ url_for('search', page=current_page+1) }}"
+                    class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">下一页</a>
+                    {% endif %}
+
+        </div>
+        <!-- Jump to page input -->
+        {% if total_pages > 1 %}
+        <form action="{{ url_for('search') }}" method="get" class="ml-4 mt-2">
+            <input type="number" name="page" min="1" max="{{ total_pages }}" value="{{ current_page }}"
+                class="px-3 py-1 mx-1 bg-gray-200 rounded" style="width: 60px;">
+            <button type="submit" class="px-3 py-1 bg-gray-200 rounded hover:bg-blue-300">Go</button>
+        </form>
+        {% endif %}
+        {% endif %}
+        <!-- Copyright -->
+        <div class="mt-2">
+            <a href="#" class="text-gray-400 font-semibold hover:underline hover:text-blue-400">© M1NG</a>
+        </div>
+    </footer>
+    <div id="myModal" class="modal" onclick="closeModal(event)">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div id="tagsContainer" class="tags"></div>
+    </div>
+    <script src="../static/js/global.js"></script>
+    <script>
+        let scale = 1; // 初始化缩放比例
+        const modalImage = document.getElementById("modalImage");
+
+        // 打开模态框，加载原图
+        function openModal(imageSrc, imageHash) {
+            var modal = document.getElementById("myModal");
+            modal.style.display = "block";
+            modalImage.src = imageSrc;
+            scale = 1; // 每次打开时重置缩放比例
+            modalImage.style.transform = `scale(${scale})`;
+
+            // 获取并显示图片标签
+            fetch(`/get_image_tags/${imageHash}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tagsContainer = document.getElementById("tagsContainer");
+                    tagsContainer.innerHTML = ''; // 清空之前的标签
+                    if (data.tags && data.tags.length > 0) {
+                        data.tags.forEach(tag => {
+                            let tagElement = document.createElement("span");
+                            tagElement.classList.add("tag");
+                            tagElement.innerText = tag;
+                            tagsContainer.appendChild(tagElement);
+                        });
+                    } else {
+                        tagsContainer.innerText = '无标签';
+                    }
+                })
+                .catch(error => console.error('Error fetching tags:', error));
+        }
+
+        // 关闭模态框
+        function closeModal(event) {
+            var modal = document.getElementById("myModal");
+            if (event.target === modal || event.target.classList.contains('close')) {
+                modal.style.display = "none";
+            }
+        }
+        var modal2 = document.getElementById("myModal");
+        modal2.addEventListener('wheel', function (event) {
+            event.preventDefault(); // 防止页面滚动
+            if (event.deltaY < 0) {
+                // 滚轮向上滚动，放大图片
+                scale += 0.1;
+            } else {
+                // 滚轮向下滚动，缩小图片
+                scale = Math.max(0.1, scale - 0.1); // 防止缩小到0以下
+            }
+            modalImage.style.transform = `scale(${scale})`;
+        });
+
+        // 图片缩放功能 (监听滚轮事件)
+        modalImage.addEventListener('wheel', function (event) {
+            event.preventDefault(); // 防止页面滚动
+            if (event.deltaY < 0) {
+                // 滚轮向上滚动，放大图片
+                scale += 0.1;
+            } else {
+                // 滚轮向下滚动，缩小图片
+                scale = Math.max(0.1, scale - 0.1); // 防止缩小到0以下
+            }
+            modalImage.style.transform = `scale(${scale})`;
+        });
+        let x = 0;
+        let y = 0;
+        let isPointerdown = false;
+        let lastPointermove = { x: 0, y: 0 };
+        modalImage.addEventListener('pointerdown', function (event) {
+            event.preventDefault();
+            isPointerdown = true;
+            lastPointermove = { x: event.clientX, y: event.clientY };
+
+        });
+
+        modalImage.addEventListener('pointermove', function (event) {
+            if (isPointerdown) {
+                const current = { x: event.clientX, y: event.clientY };
+                x += current.x - lastPointermove.x;
+                y += current.y - lastPointermove.y;
+                lastPointermove = current;
+                modalImage.style.transform = "translate3d(" + x + "px, " + y + "px, 0) scale(" + scale + ")";
+            }
+            event.preventDefault();
+        });
+
+        modalImage.addEventListener('pointerup', function (event) {
+            event.preventDefault();
+            isPointerdown = false;
+        });
+
+
+    </script>
+</body>
+
+
+</html>

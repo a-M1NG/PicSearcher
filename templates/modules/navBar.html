@@ -1,0 +1,97 @@
+<nav
+    class="fixed top-4 left-1/2 transform -translate-x-1/2 flex backdrop-blur bg-opacity-50 bg-pink-100 smooth--trans dark:bg-pink-400 dark:shadow-pink-400/40 dark:shadow-md dark:bg-opacity-50 w-full max-w-6xl mx-auto rounded-full z-10 px-6 py-2 shadow-md justify-between items-center">
+    <div class="flex items-center space-x-4">
+        <ul class="flex items-center space-x-4">
+            <li>
+                <a href="{{url_for('index')}}"
+                    class="flex items-center text-black dark:text-white font-semibold hover:text-gray-600 dark:hover:text-gray-300 smooth--trans">
+                    <svg class="w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                    </svg> 首页
+                </a>
+            </li>
+            <li>
+                <a href="{{url_for('admin')}}"
+                    class="flex items-center text-black dark:text-white font-semibold hover:text-gray-600 dark:hover:text-gray-300 smooth--trans">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+
+
+
+                    <span class="user_name">{{Username}}</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{url_for('gallery')}}"
+                    class="flex items-center text-black dark:text-white font-semibold hover:text-gray-600 dark:hover:text-gray-300 smooth--trans">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-6">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M6 6.878V6a2.25 2.25 0 0 1 2.25-2.25h7.5A2.25 2.25 0 0 1 18 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 0 0 4.5 9v.878m13.5-3A2.25 2.25 0 0 1 19.5 9v.878m0 0a2.246 2.246 0 0 0-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0 1 21 12v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6c0-.98.626-1.813 1.5-2.122" />
+                    </svg> 相册
+                </a>
+            </li>
+            <li>
+                <a href="{{url_for('logout')}}"
+                    class="flex items-center text-black dark:text-white font-semibold hover:text-gray-600 dark:hover:text-gray-300 smooth--trans">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-6">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                    </svg> 登出
+                </a>
+            </li>
+            <li>
+                <form action="{{url_for('search')}}" method="post"
+                    class="flex items-center text-black cursor-pointer dark:text-white font-semibold hover:text-gray-600 dark:hover:text-gray-300 smooth--trans">
+                    <input id="exact_match" name="exact_match" type="checkbox" {% if exactmatch %}checked{% endif %}
+                        class="mr-1 cursor-pointer" />
+                    <label for="exact_match" class="cursor-pointer">精确匹配</label>
+                </form>
+            </li>
+        </ul>
+    </div>
+    <div id="searchFormDiv" class="flex-grow flex justify-center relative">
+        <form id="searchForm" action="{{url_for('search')}}" method="post" class="relative ">
+            <input type="text" id="tags" name="tags" required oninput="toggleClearIcon()" autocomplete="off"
+                class="w-96 h-9 pl-2 pr-16 py-1 text-sm bg-gray-50 hover:bg-white group-hover:bg-gray-50 group-focus-within:bg-gray-100 transition-all duration-300 ease-in-out text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="搜索" value="{{init_tags}}" />
+
+            <!-- Clear icon -->
+            <a href="#" id="clear-icon" class="absolute top-0 right-10 flex h-full items-center hidden"
+                onclick="clearInput()">
+                <svg class="w-5 fill-gray-400 text-gray-200 hover:text-gray-100 hover:fill-gray-300 transition-colors duration-300"
+                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+            </a>
+
+            <!-- Search button -->
+            <button type="submit"
+                class="absolute top-0 right-1 flex h-full aspect-square justify-center items-center bg-transparent text-white font-bold rounded-lg px-1 py-1 hover:bg-gray-300 active:bg-gray-400 border-0 border-sky-200 transition-all duration-300 ease-in-out">
+                <svg class="w-5 text-gray-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                    stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+            </button>
+        </form>
+    </div>
+    <!--dark mode button-->
+    <button onclick="toggleDarkMode()"
+        class="flex items-center justify-center w-10 h-10 bg-white dark:bg-gray-700 dark:hover:bg-gray-500 rounded-full shadow-md hover:bg-gray-200 smooth--trans">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+            class="w-6 text-black dark:text-white">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+        </svg>
+
+    </button>
+</nav>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+</head>
+
+<body>
+    <h2>Welcome, {{ username }}!</h2>
+    <h3>Add New User</h3>
+    <form method="POST" action="{{ url_for('admin') }}">
+        <label for="username">New Username</label>
+        <input type="text" name="username" required>
+        <label for="password">New Password</label>
+        <input type="password" name="password" required>
+        <button type="submit">Add User</button>
+    </form>
+    <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('index') }}">Back to Home</a>
+</body>
+
+</html>
