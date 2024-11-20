@@ -9,14 +9,12 @@ from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length
 from flask_wtf import FlaskForm
 import os
+import configparser
 
+config = configparser.ConfigParser()
+config.read("config.ini")
 # MySQL配置
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "password",
-    "database": "images",
-}
+DB_CONFIG = dict(config["DB_CONFIG"])
 
 
 # 用户表单

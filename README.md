@@ -10,6 +10,20 @@ PicSearcher is a web-based application built using Flask and TailwindCSS. This p
 - Like and save images to a collection
 - View saved images in the gallery
 
+## Pages
+Login:
+<img src='assets/login.png'>
+Main page:
+<img src='assets/main_page.png'>
+Search results:
+<img src='assets/search_results.png'>
+Gallery:
+<img src='assets/galleries.png'>
+Into gallery:
+<img src='assets/gallery_pics.png'>
+Card hovering:
+<img src='assets/card_focus.png'>
+
 ## Technologies Used
 
 - Flask: A lightweight WSGI web application framework in Python
