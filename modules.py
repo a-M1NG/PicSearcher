@@ -12,7 +12,9 @@ import os
 import configparser
 
 config = configparser.ConfigParser()
-config.read("config.ini")
+# 读取配置文件, 先获取当前文件的绝对路径，然后获取当前文件的目录路径
+config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
+config.read(config_path)
 # MySQL配置
 DB_CONFIG = dict(config["DB_CONFIG"])
 
@@ -65,11 +67,22 @@ def ImageResizer(image_path, max_width=350, max_height=350):
         new_width = int(width * ratio)
         new_height = int(height * ratio)
         img = img.resize((new_width, new_height), Image.Resampling.BICUBIC)
+        # Determine if the image has transparency
+        has_transparency = False
+        if img.mode in ("RGBA", "LA") or (
+            img.mode == "P" and "transparency" in img.info
+        ):
+            has_transparency = True
 
-        # 尝试获取图片格式，如果未设置格式，使用文件扩展名判断
+        # Decide the target mode based on transparency
+        if has_transparency:
+            img = img.convert("RGBA")
+        else:
+            img = img.convert("RGB")
+
+        # Attempt to get image format; if not set, infer from file extension
         img_format = img.format
         if img_format is None:
-            # 如果无法通过img.format检测图片格式，可以通过文件后缀名推断
             file_extension = image_path.split(".")[-1].lower()
             if file_extension == "png":
                 img_format = "PNG"
@@ -78,14 +91,19 @@ def ImageResizer(image_path, max_width=350, max_height=350):
 
         img_io = io.BytesIO()
 
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-
+        # Choose the appropriate format and handle transparency
         if img_format.lower() == "png":
-            img.save(img_io, "PNG")  # 保存为PNG
+            img.save(img_io, "PNG")  # Save as PNG to preserve transparency
             mimetype = "image/png"
         else:
-            img.save(img_io, "JPEG")  # 默认保存为JPEG
+            if has_transparency:
+                # If saving as JPEG, need to remove transparency
+                # Optionally, you can provide a background color
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+                background.save(img_io, "JPEG")
+            else:
+                img.save(img_io, "JPEG")  # Save as JPEG
             mimetype = "image/jpeg"
 
         img_io.seek(0)
@@ -365,3 +383,51 @@ def toggle_like_image(image_id, uid):
     conn.close()
     print("like toggled")
     return jsonify({"success": True})
+
+
+def fetch_users():
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    cursor.execute("SELECT uid, username, password_hash FROM user")
+    results = cursor.fetchall()
+    conn.close()
+    return [User(*row) for row in results]
+
+
+def fetch_user_liked(uid):
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    query = """
+        SELECT i.hash, i.id
+        FROM user_liked ul
+        JOIN image i ON ul.image_id = i.id
+        WHERE ul.uid = %s
+        ORDER BY i.id
+    """
+    cursor.execute(query, (uid,))
+    results = cursor.fetchall()
+    conn.close()
+    return [MImage(row[0], get_image_tags(row[0]), row[1], True) for row in results]
+
+
+def fetch_user(username):
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    query = "SELECT uid, username, password_hash FROM user WHERE username = %s"
+    cursor.execute(query, (username,))
+    result = cursor.fetchone()
+    conn.close()
+    return {"id": result[0], "username": result[1]}
+
+
+def remove_user_from_db(user_id):
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM user WHERE uid = %s", (user_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+    cursor.execute("DELETE FROM user WHERE uid = %s", (user_id,))
+    conn.commit()
+    conn.close()
+    return True

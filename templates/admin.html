@@ -1,24 +1,337 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN" {%if darkmode %}class="dark" {% endif %}>
+
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
+    <link href="../static/css/main.css" rel="stylesheet">
+    <link rel="shortcut icon" href="../static/imgs/admin.svg" type="image/x-icon">
+    <title>管理页</title>
 </head>
 
-<body>
-    <h2>Welcome, {{ username }}!</h2>
-    <h3>Add New User</h3>
-    <form method="POST" action="{{ url_for('admin') }}">
-        <label for="username">New Username</label>
-        <input type="text" name="username" required>
-        <label for="password">New Password</label>
-        <input type="password" name="password" required>
-        <button type="submit">Add User</button>
-    </form>
-    <a href="{{ url_for('logout') }}">Logout</a>
-    <a href="{{ url_for('index') }}">Back to Home</a>
+<body class="bg-gray-50 dark:bg-gray-900 font-sans_light dark:font-sans_light smooth--trans flex flex-col min-h-screen">
+    <script src="../static/js/global.js"></script>
+    {% include './modules/navBar.html' %}
+    <div id="message" class="mb-4"></div>
+
+    <div class="flex-grow px-5 smooth--trans">
+        <div class="relative flex-grow items-center top-20">
+            <p class="text-5xl font-semibold text-gray-800 dark:text-gray-200 text-center">欢迎, {{ Username }}!</p>
+            {% if images %}
+            <p
+                class="text-center cursor-default text-4xl font-light font-sans_light text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-gray-200 smooth--trans">
+                您喜欢的图片</p>
+            <div class="flex-grow px-5 smooth--trans">
+                <div class="container px-8 py-8 my-28 max-w-none">
+                    {% if images %}
+                    <div
+                        class="grid xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 place-items-center">
+                        {% for image in images %}
+                        <!-- reuse the template -->
+                        {% include './modules/imageCard.html' %}
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <!-- Display "No Results" when no images found -->
+                    <div class="flex flex-col items-center justify-center text-center">
+                        <p class="text-2xl font-semibold text-gray-600 dark:text-gray-300">对于给定的关键字"{{init_tags}}"无结果
+                        </p>
+                        <a href="{{ url_for('index') }}"
+                            class="mt-4 px-6 py-2 text-white bg-blue-500 hover:bg-blue-600 rounded-full smooth--trans">
+                            返回
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <p
+                class="text-center cursor-default text-4xl font-light font-sans_light text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-gray-200 smooth--trans">
+                您暂时没有喜欢的图片，去浏览一下吧~</p>
+            {% endif %}
+
+            {% if Username == 'admin' %}
+            <div class="px-8 py-8 my-28 max-w-none">
+                <h3 class="text-xl font-medium text-gray-700 dark:text-gray-300">用户管理</h3>
+                <div class="mt-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md smooth--trans">
+                    <ul class="space-y-4" id="userList">
+                        {% for user in users %}
+                        <li
+                            class="flex p-3 rounded-lg items-center justify-between bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 smooth--trans">
+                            <span class="text-gray-800 dark:text-gray-200 text-xl cursor-default">{{ user.username
+                                }}</span>
+                            <div class="space-x-2">
+                                {%if user.username != 'admin'%}
+                                <button onclick="deleteUser('{{ user.id }}')"
+                                    class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg">删除用户</button>
+                                {%else%}
+                                <!--“当前用户”-->
+                                <button
+                                    class="px-3 py-1 bg-gray-400 drak:bg-gray-600 text-white rounded-lg cursor-default">当前用户</button>
+                                {%endif%}
+                            </div>
+                        </li>
+                        {% endfor %}
+                        <!--添加用户逻辑-->
+                        <li class='flex items-center justify-center'>
+                            <button id="addUserBtn"
+                                class="px-4 py-2 w-20 h-full text-2xl bg-blue-500 text-white rounded-full hover:bg-blue-600 smooth--trans">
+                                +
+                            </button>
+                            <div id="addUserForm" class="hidden mt-4">
+                                <form id="registerForm" class="flex flex-col space-y-4">
+                                    <input type="text" name="username" placeholder="用户名" required
+                                        class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <input type="password" name="password" placeholder="密码" required
+                                        class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <button type="submit"
+                                        class=" text-white px-4 py-2  bg-blue-500  rounded-full hover:bg-blue-600 smooth--trans focus:outline-none">
+                                        添加用户
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div id="myModal" class="modal" onclick="closeModal(event)">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+        <div id="tagsContainer" class="tags"></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const addUserBtn = document.getElementById('addUserBtn');
+            const addUserForm = document.getElementById('addUserForm');
+            const registerForm = document.getElementById('registerForm');
+            const messageDiv = document.getElementById('message');
+            const userList = document.getElementById('userList');
+
+            // 显示表单并隐藏按钮
+            addUserBtn.addEventListener('click', function (event) {
+                event.stopPropagation(); // 防止事件冒泡
+                addUserBtn.classList.add('hidden');
+                addUserForm.classList.remove('hidden');
+                // 聚焦到用户名输入框
+                registerForm.username.focus();
+            });
+
+            // 点击表单内部时阻止事件冒泡
+            addUserForm.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+
+            // 点击文档其他地方时隐藏表单并显示按钮
+            document.addEventListener('click', function () {
+                if (!addUserForm.classList.contains('hidden')) {
+                    addUserForm.classList.add('hidden');
+                    addUserBtn.classList.remove('hidden');
+                    registerForm.reset();
+                }
+            });
+
+            // 可选：按下 Esc 键时隐藏表单并显示按钮
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !addUserForm.classList.contains('hidden')) {
+                    addUserForm.classList.add('hidden');
+                    addUserBtn.classList.remove('hidden');
+                    registerForm.reset();
+                }
+            });
+
+            // 处理表单提交
+            registerForm.addEventListener('submit', function (event) {
+                event.preventDefault(); // 防止默认表单提交
+
+                const formData = new FormData(registerForm);
+                const data = {
+                    username: formData.get('username'),
+                    password: formData.get('password')
+                };
+
+                fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest' // 用于在后端识别AJAX请求
+                    },
+                    body: JSON.stringify({
+                        username: data.username,
+                        password: data.password
+                    })
+                })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            //alert(result.message);
+                            addUserForm.classList.add('hidden');
+                            addUserBtn.classList.remove('hidden');
+                            registerForm.reset();
+                            // 更新用户列表
+                            addUserToList(result.user);
+                        } else {
+                            alert(result.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('添加用户到列表发生错误，请稍后再试。');
+                    });
+            });
+
+            // 显示消息
+            function showMessage(message, type) {
+                // 清除现有消息
+                messageDiv.innerHTML = '';
+                // 创建消息元素
+                const msg = document.createElement('div');
+                msg.className = `p-4 mb-4 text-sm text-${type === 'success' ? 'green' : 'red'}-700 bg-${type === 'success' ? 'green' : 'red'}-100 rounded-lg`;
+                msg.textContent = message;
+                messageDiv.appendChild(msg);
+                // 自动隐藏消息
+                setTimeout(() => {
+                    msg.remove();
+                }, 5000);
+            }
+
+            // 动态添加用户到用户列表
+            function addUserToList(user) {
+                const li = document.createElement('li');
+                li.className = "flex p-3 rounded-lg items-center justify-between bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 smooth--trans";
+                li.innerHTML = `
+                    <span class="text-gray-800 dark:text-gray-200 text-xl cursor-default">${user.username}</span>
+                    <div class="space-x-2">
+                        <button onclick="deleteUser('${user.id}')"
+                            class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg">删除用户</button>
+                    </div>
+                `;
+                userList.insertBefore(li, userList.lastElementChild); // 插入到添加用户按钮前
+            }
+
+            // 处理删除用户
+            window.deleteUser = function (userId) {
+                if (confirm('确定要删除该用户吗？')) {
+                    fetch('/delete_user', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ user_id: userId })
+                    })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                //alert(result.message);
+                                // 从列表中移除用户
+                                const userItem = document.querySelector(`button[onclick="deleteUser('${userId}')"]`).closest('li');
+                                if (userItem) {
+                                    userList.removeChild(userItem);
+                                }
+                            } else {
+                                alert(result.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('删除用户发生错误，请稍后再试。');
+                        });
+                }
+            }
+        });
+        let scale = 1; // 初始化缩放比例
+        const modalImage = document.getElementById("modalImage");
+
+        // 打开模态框，加载原图
+        function openModal(imageSrc, imageHash) {
+            var modal = document.getElementById("myModal");
+            modal.style.display = "block";
+            modalImage.src = imageSrc;
+            scale = 1; // 每次打开时重置缩放比例
+            modalImage.style.transform = `scale(${scale})`;
+
+            // 获取并显示图片标签
+            fetch(`/get_image_tags/${imageHash}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tagsContainer = document.getElementById("tagsContainer");
+                    tagsContainer.innerHTML = ''; // 清空之前的标签
+                    if (data.tags && data.tags.length > 0) {
+                        data.tags.forEach(tag => {
+                            let tagElement = document.createElement("span");
+                            tagElement.classList.add("tag");
+                            tagElement.innerText = tag;
+                            tagsContainer.appendChild(tagElement);
+                        });
+                    } else {
+                        tagsContainer.innerText = '无标签';
+                    }
+                })
+                .catch(error => console.error('Error fetching tags:', error));
+        }
+
+        // 关闭模态框
+        function closeModal(event) {
+            var modal = document.getElementById("myModal");
+            if (event.target === modal || event.target.classList.contains('close')) {
+                modal.style.display = "none";
+            }
+        }
+        var modal2 = document.getElementById("myModal");
+        modal2.addEventListener('wheel', function (event) {
+            event.preventDefault(); // 防止页面滚动
+            if (event.deltaY < 0) {
+                // 滚轮向上滚动，放大图片
+                scale += 0.1;
+            } else {
+                // 滚轮向下滚动，缩小图片
+                scale = Math.max(0.1, scale - 0.1); // 防止缩小到0以下
+            }
+            modalImage.style.transform = `scale(${scale})`;
+        });
+
+        // 图片缩放功能 (监听滚轮事件)
+        modalImage.addEventListener('wheel', function (event) {
+            event.preventDefault(); // 防止页面滚动
+            if (event.deltaY < 0) {
+                // 滚轮向上滚动，放大图片
+                scale += 0.1;
+            } else {
+                // 滚轮向下滚动，缩小图片
+                scale = Math.max(0.1, scale - 0.1); // 防止缩小到0以下
+            }
+            modalImage.style.transform = `scale(${scale})`;
+        });
+        let x = 0;
+        let y = 0;
+        let isPointerdown = false;
+        let lastPointermove = { x: 0, y: 0 };
+        modalImage.addEventListener('pointerdown', function (event) {
+            event.preventDefault();
+            isPointerdown = true;
+            lastPointermove = { x: event.clientX, y: event.clientY };
+
+        });
+
+        modalImage.addEventListener('pointermove', function (event) {
+            if (isPointerdown) {
+                const current = { x: event.clientX, y: event.clientY };
+                x += current.x - lastPointermove.x;
+                y += current.y - lastPointermove.y;
+                lastPointermove = current;
+                modalImage.style.transform = "translate3d(" + x + "px, " + y + "px, 0) scale(" + scale + ")";
+            }
+            event.preventDefault();
+        });
+
+        modalImage.addEventListener('pointerup', function (event) {
+            event.preventDefault();
+            isPointerdown = false;
+        });
+    </script>
 </body>
 
 </html>

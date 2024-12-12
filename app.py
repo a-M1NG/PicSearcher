@@ -1,8 +1,7 @@
-from calendar import c
-import glob
 from mimetypes import init
 from re import T
 import ssl
+from tkinter import NO
 from flask_talisman import Talisman
 from flask_limiter import Limiter
 from flask import (
@@ -59,13 +58,18 @@ def load_user(user_id):
 # 首页路由
 @app.route("/")
 def index():
+    if session.get("DarkMode") is None:
+        session["DarkMode"] = True
     if current_user.is_authenticated:
         return render_template(
             "search.html",
             Username=current_user.username,
             exactmatch=session.get("EXACTMATCH", False),
+            darkmode=session.get("DarkMode", True),
         )
-    return redirect(url_for("login", loginreq=True))
+    return redirect(
+        url_for("login", loginreq=True, darkmode=session.get("DarkMode", True))
+    )
 
 
 latest_results = []
@@ -115,6 +119,7 @@ def search():
             Username=current_user.username,
             init_tags=",".join(latest_search_tags),
             exactmatch=session.get("EXACTMATCH", False),
+            darkmode=session.get("DarkMode", True),
         )
 
     start_page = max(page - 1, 1)
@@ -132,6 +137,7 @@ def search():
         start_page=start_page,  # 分页的起始页
         end_page=end_page,  # 分页的结束页
         total_count=total_images,  # 总图片数量
+        darkmode=session.get("DarkMode", True),
     )
 
 
@@ -187,6 +193,7 @@ def gallery():
         current_page=page,
         start_page=start_page,
         end_page=end_page,
+        darkmode=session.get("DarkMode", True),
     )
 
 
@@ -231,6 +238,7 @@ def into_gallery(gallery_name):
         end_page=end_page,
         phoneua=is_phone(request),
         total_count=total_images,
+        darkmode=session.get("DarkMode", True),
     )
 
 
@@ -293,31 +301,65 @@ def login():
     else:
         form.username.data = ""
 
-    return render_template("login.html", form=form, focuspassword=focuspassword)
+    return render_template(
+        "login.html",
+        form=form,
+        focuspassword=focuspassword,
+        darkmode=session.get("DarkMode", True),
+    )
 
 
 # 管理页面路由 (添加用户)
-@app.route("/admin", methods=["GET", "POST"])
+@app.route("/admin", methods=["GET"])
 @login_required
 def admin():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+    return render_template(
+        "admin.html",
+        Username=current_user.username,
+        users=fetch_users(),
+        darkmode=session.get("DarkMode", True),
+        images=fetch_user_liked(current_user.id),
+    )
 
-        conn = mysql.connector.connect(**DB_CONFIG)
-        cursor = conn.cursor()
-        try:
-            cursor.execute(
-                "INSERT INTO user (username, password_hash) VALUES (%s, %s)",
-                (username, password_hash),
+
+@app.route("/register", methods=["POST"])
+@login_required
+def add_user():
+    data = request.get_json()
+    username = data.get("username")
+    password = data.get("password")
+    print(f"用户请求注册, 用户名: {username}, 密码: {password}")
+    if not username or not password:
+        return jsonify({"success": False, "message": "用户名或密码不能为空"})
+    else:
+        if add_user_to_db(username, password):
+            return jsonify(
+                {
+                    "success": True,
+                    "message": f"已添加用户{username}",
+                    "user": fetch_user(username),
+                }
             )
-            conn.commit()
-            flash("User added successfully!", "success")
-        except mysql.connector.IntegrityError:
-            flash("Username already exists.", "danger")
+        else:
+            flash(f"用户名 {username} 已存在", "danger")
+            return jsonify({"success": False, "message": "用户名已存在"})
 
-    return render_template("admin.html", username=current_user.username)
+
+@app.route("/delete_user", methods=["POST"])
+@login_required
+def delete_user_route():
+    if request.is_json:
+        data = request.get_json()
+        user_id = data.get("user_id")
+        if not user_id:
+            return jsonify({"success": False, "message": "用户ID不能为空"})
+        if remove_user_from_db(user_id):
+            return jsonify({"success": True, "message": "用户已删除"})
+        else:
+            return jsonify({"success": False, "message": "用户不存在"})
+    else:
+        flash("非法请求", "danger")
+        return redirect(url_for("admin"))
 
 
 # 登出路由
@@ -351,10 +393,38 @@ def toggle_like():
     return toggle_like_image(image_id, current_user.id)
 
 
+@app.route("/toggle_darkmode", methods=["POST"])
+def toggle_darkmode():
+    session["DarkMode"] = not session.get("DarkMode", False)
+    return jsonify({"darkmode": session["DarkMode"]})
+
+
+@app.route("/view_all_liked_images", methods=["GET"])
+def view_all_liked_images():
+    pass
+
+
+def add_user_to_db(username, password):
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    # 检查用户名是否已存在
+    cursor.execute("SELECT * FROM user WHERE username = %s", (username,))
+    if cursor.fetchone():
+        conn.close()
+        return False
+    cursor.execute(
+        "INSERT INTO user (username, password_hash) VALUES (%s, %s)",
+        (username, bcrypt.generate_password_hash(password).decode("utf-8")),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
 # 404页面
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template("404.html"), 404
+    return render_template("404.html", darkmode=session.get("DarkMode", True)), 404
 
 
 if __name__ == "__main__":

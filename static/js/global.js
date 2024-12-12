@@ -1,5 +1,19 @@
 function toggleDarkMode() {
     document.documentElement.classList.toggle('dark');
+    
+    fetch('/toggle_darkmode', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Dark mode is now:', data.darkmode);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
 }
 
 //添加标签到搜索框
