@@ -1,5 +1,5 @@
 <div id="image-{{ image.id }}"
-    class="flex flex-row relative bg-white dark:bg-gray-800 rounded-3xl shadow-lg overflow-hidden group sm:w-96 sm:h-40 lg:w-[480px] lg:h-[240px] xl:w-[560px] xl:h-[280px]">
+    class="flex flex-row relative backdrop-blur-sm bg-white dark:bg-gray-800 rounded-3xl shadow-lg overflow-hidden group sm:w-96 sm:h-40 lg:w-[480px] lg:h-[240px] xl:w-[560px] xl:h-[280px]">
     <!-- Image Area -->
     <div
         class="bg-gray-300 dark:bg-gray-700 flex-shrink-0 h-full w-1/2 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 relative group smooth--trans group/image-content">
@@ -71,7 +71,7 @@
                 <div id="tag-input-area-{{ image.id }}"
                     class="hidden flex flex-row items-center justify-center relative">
                     <input id="new-tag-input-{{ image.id }}" type="text"
-                        class="h-8 w-40 pl-2 pr-7 border rounded-full text-white bg-white hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none smooth--trans"
+                        class="h-8 w-40 pl-2 pr-7 border rounded-full text-gray-900 dark:text-white bg-white hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none smooth--trans"
                         placeholder="输入新标签" />
                     <button id="submit-tag-btn-{{ image.id }}" type="submit"
                         class="absolute top-0 right-1 flex mt-1 mb-1 h-6 w-6 justify-center items-center bg-transparent text-white font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 border-0 border-sky-200 transition-all duration-300 ease-in-out"

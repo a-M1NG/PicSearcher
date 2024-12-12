@@ -13,18 +13,22 @@
 }
 
 :root {
-    --gradient-from: #3b82f6; /* blue-500 */
-    --gradient-to: #a855f7;   /* purple-500 */
+    --gradient-from: #3b82f6;
+    /* blue-500 */
+    --gradient-to: #a855f7;
+    /* purple-500 */
 }
 
 .dark {
-    --gradient-from: #1f2937; /* gray-800 */
-    --gradient-to: #4f46e5;   /* indigo-700 */
+    --gradient-from: #1f2937;
+    /* gray-800 */
+    --gradient-to: #4f46e5;
+    /* indigo-700 */
 }
 
 .bg-gradient-custom {
     background-image: linear-gradient(to top right, var(--gradient-from), var(--gradient-to));
-    
+
 }
 
 .smooth--trans2 {
@@ -40,11 +44,11 @@
 @layer components {
     .shadow-blue-custom {
         box-shadow:
-        0 -4px 6px -1px theme('colors.blue.500', 'rgba(0, 0, 0, 0.1)'),
-        /* 上影子 */
-        4px 0 6px -1px theme('colors.blue.500', 'rgba(0, 0, 0, 0.1)'),
-        /* 右影子 */
-        0 4px 6px -1px theme('colors.blue.500', 'rgba(0, 0, 0, 0.1)');
+            0 -4px 6px -1px theme('colors.blue.500', 'rgba(0, 0, 0, 0.1)'),
+            /* 上影子 */
+            4px 0 6px -1px theme('colors.blue.500', 'rgba(0, 0, 0, 0.1)'),
+            /* 右影子 */
+            0 4px 6px -1px theme('colors.blue.500', 'rgba(0, 0, 0, 0.1)');
         /* 下影子 */
     }
 }

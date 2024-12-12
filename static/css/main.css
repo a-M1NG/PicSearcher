@@ -596,11 +596,11 @@ video {
 
 .shadow-blue-custom {
   box-shadow:
-        0 -4px 6px -1px #3b82f6,
-        
-        4px 0 6px -1px #3b82f6,
-        
-        0 4px 6px -1px #3b82f6;
+            0 -4px 6px -1px #3b82f6,
+            
+            4px 0 6px -1px #3b82f6,
+            
+            0 4px 6px -1px #3b82f6;
   /* 下影子 */
 }
 
@@ -1207,6 +1207,10 @@ video {
   --tw-bg-opacity: 0.5;
 }
 
+.bg-opacity-20 {
+  --tw-bg-opacity: 0.2;
+}
+
 .bg-gradient-to-tr {
   background-image: linear-gradient(to top right, var(--tw-gradient-stops));
 }
@@ -1215,10 +1219,6 @@ video {
   --tw-gradient-from: #3b82f6 var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(59 130 246 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
-.to-purple-400 {
-  --tw-gradient-to: #c084fc var(--tw-gradient-to-position);
 }
 
 .to-purple-500 {
@@ -2023,12 +2023,18 @@ video {
   background-color: rgb(244 114 182 / var(--tw-bg-opacity));
 }
 
-.dark\:bg-opacity-50:is(.dark *) {
-  --tw-bg-opacity: 0.5;
+.dark\:bg-indigo-700:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(67 56 202 / var(--tw-bg-opacity));
 }
 
-.dark\:bg-gradient-to-tr:is(.dark *) {
-  background-image: linear-gradient(to top right, var(--tw-gradient-stops));
+.dark\:bg-indigo-800:is(.dark *) {
+  --tw-bg-opacity: 1;
+  background-color: rgb(55 48 163 / var(--tw-bg-opacity));
+}
+
+.dark\:bg-opacity-50:is(.dark *) {
+  --tw-bg-opacity: 0.5;
 }
 
 .dark\:from-gray-800:is(.dark *) {
@@ -2037,24 +2043,8 @@ video {
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
-.dark\:from-indigo-700:is(.dark *) {
-  --tw-gradient-from: #4338ca var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(67 56 202 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
-.dark\:from-purple-700:is(.dark *) {
-  --tw-gradient-from: #7e22ce var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(126 34 206 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
 .dark\:to-indigo-700:is(.dark *) {
   --tw-gradient-to: #4338ca var(--tw-gradient-to-position);
-}
-
-.dark\:to-pink-800:is(.dark *) {
-  --tw-gradient-to: #9d174d var(--tw-gradient-to-position);
 }
 
 .dark\:font-sans_light:is(.dark *) {

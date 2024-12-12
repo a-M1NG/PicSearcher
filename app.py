@@ -1,12 +1,5 @@
-from mimetypes import init
-from re import T
-import ssl
-from tkinter import NO
-from flask_talisman import Talisman
-from flask_limiter import Limiter
 from flask import (
     Flask,
-    Response,
     jsonify,
     render_template,
     request,
@@ -20,7 +13,6 @@ from flask import (
 from flask_bcrypt import Bcrypt
 from flask_login import (
     LoginManager,
-    UserMixin,
     login_user,
     login_required,
     logout_user,
@@ -29,7 +21,6 @@ from flask_login import (
 import mysql.connector
 import os
 import random
-from ssl import SSLContext, PROTOCOL_TLS_SERVER
 from modules import *
 
 app = Flask(__name__)
@@ -367,6 +358,7 @@ def delete_user_route():
 @login_required
 def logout():
     logout_user()
+    session.pop("_flashes", None)
     return redirect(url_for("login"))
 
 
@@ -429,4 +421,4 @@ def page_not_found(e):
 
 if __name__ == "__main__":
     # Talisman(app, force_https=True)
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
