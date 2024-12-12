@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!DOCTYPE html {%if darkmode %}class="dark" {% endif %}>
 <html>
 
 <head>
-    <link href="{{url_for('static',filename='css/main.css')}}" rel="stylesheet">
+    <link href="../static/css/main.css" rel="stylesheet">
     <!-- <link href="../static/css/main.css" rel="stylesheet"> -->
     <link rel="shortcut icon" href="../static/imgs/error.svg">
     <title>出错啦！</title>
@@ -32,13 +32,13 @@
     </style>
 </head>
 
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 dark:bg-gray-800 flex items-center justify-center min-h-screen">
     <div class="text-center">
         <h1 class="text-9xl font-bold text-red-500 bounce">404</h1>
-        <p class="text-3xl mt-4">Oops! Page Not Found</p>
-        <p class="mt-2 text-gray-600">The page you are looking for doesn't exist.</p>
+        <p class="text-3xl mt-4 dark:text-gray-200">Oops! Page Not Found</p>
+        <p class="mt-2 text-gray-600 dark:text-gray-400 ">The page you are looking for doesn't exist.</p>
         <a href="/"
-            class="inline-block mt-8 px-6 py-3 text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
+            class="inline-block mt-8 px-6 py-4 text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
             Go Back Home
         </a>
     </div>

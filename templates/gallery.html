@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="dark">
+<html lang="zh-CN" {%if darkmode %}class="dark" {% endif %}>
 
 <head>
     <title>相册</title>
@@ -115,6 +115,19 @@
     <script>
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
+            fetch('/toggle_darkmode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Dark mode is now:', data.darkmode);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
         }
     </script>
     <!--nav bar-->

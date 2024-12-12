@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="zh-CN">
+<html {%if darkmode %}class="dark" {% endif %} lang="zh-CN">
 
 <head>
     <title>搜索结果</title>
@@ -145,6 +145,19 @@
     <script>
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
+            fetch('/toggle_darkmode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Dark mode is now:', data.darkmode);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
         }
         document.getElementById('searchForm').addEventListener('submit', function (event) {
             const checkbox = document.getElementById('exact_match');

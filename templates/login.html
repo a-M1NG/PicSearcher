@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" {%if darkmode %}class="dark" {% endif %}>
 
 <head>
     <meta charset="UTF-8">
@@ -112,6 +112,19 @@
                 darkModeIcon.src = '../static/imgs/moon.svg';
                 darkModeIcon.alt = 'Dark Mode Icon';
             }
+            fetch('/toggle_darkmode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Dark mode is now:', data.darkmode);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
         }
         {% if focuspassword %}
         document.getElementById('password').focus();  // 设置焦点
