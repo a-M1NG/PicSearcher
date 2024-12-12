@@ -10,7 +10,7 @@
 </head>
 
 <body
-    class="bg-gradient-to-tr from-blue-500 to-purple-400 flex flex-col min-h-screen dark:bg-gradient-to-tr dark:from-indigo-700 dark:to-pink-800 transition-colors duration-300 ease-in-out">
+    class="bg-gradient-to-tr from-blue-500 to-purple-500 dark:from-gray-800 dark:to-indigo-700 flex flex-col min-h-screen transition-colors duration-300 ease-in-out">
     <nav
         class="fixed top-4 left-1/2 transform -translate-x-1/2 flex backdrop-blur bg-opacity-50 bg-pink-100 transition-colors duration-300 ease-in-out dark:bg-pink-400 dark:shadow-pink-400/40 dark:shadow-md dark:bg-opacity-50 w-full max-w-6xl mx-auto rounded-full z-10 px-6 py-2 shadow-md justify-between items-center">
         <div class="flex items-center space-x-4">
@@ -42,12 +42,11 @@
             <img id="darkModeIcon" src="../static/imgs/moon.svg" alt="Dark Mode Icon" class="w-6 h-6">
         </button>
     </nav>
-    <div
-        class="flex-grow flex items-center justify-center bg-gradient-to-tr from-blue-500 to-purple-500 dark:bg-gradient-to-tr dark:from-purple-700 dark:to-pink-800 transition-colors duration-300 ease-in-out">
+    <div class="flex-grow flex items-center justify-center transition-colors duration-300 ease-in-out">
         <div class="w-full max-w-xs backdrop-blur bg-opacity-50">
             <form method="POST" action="{{ url_for('login') }}"
-                class="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4 dark:bg-gray-500 dark:shadow-gray-500/40 dark:shadow-lg smooth--trans backdrop-blur bg-opacity-50">
-                <h2 class="text-2xl font-bold mb-6 text-center dark:text-white smooth--trans">登录</h2>
+                class="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 mb-4 dark:bg-gray-500 dark:shadow-gray-500/40 dark:shadow-lg smooth--trans backdrop-blur dark:backdrop-blur bg-opacity-50 dark:bg-opacity-50">
+                <p class="text-2xl font-bold mb-6 text-center dark:text-white smooth--trans">登录</p>
                 {{ form.hidden_tag() }}
 
                 <div class="mb-4">
@@ -78,8 +77,9 @@
             </form>
         </div>
     </div>
-    <footer class="flex justify-center p-4 backdrop-blur-sm opacity-60">
-        <a href="#" class="text-gray-400 font-semibold hover:underline hover:text-blue-400">© M1NG</a>
+    <footer class="flex justify-center p-4">
+        <a href="https://github.com/a-M1NG/PicSearcher"
+            class="text-gray-400 font-semibold hover:underline hover:text-blue-400" title="前往GitHub">© M1NG</a>
     </footer>
     <script>
         const root = document.documentElement;

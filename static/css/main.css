@@ -596,11 +596,11 @@ video {
 
 .shadow-blue-custom {
   box-shadow:
-            0 -4px 6px -1px #3b82f6,
-            
-            4px 0 6px -1px #3b82f6,
-            
-            0 4px 6px -1px #3b82f6;
+        0 -4px 6px -1px #3b82f6,
+        
+        4px 0 6px -1px #3b82f6,
+        
+        0 4px 6px -1px #3b82f6;
   /* 下影子 */
 }
 
@@ -695,6 +695,11 @@ video {
   margin-right: 0.25rem;
 }
 
+.mx-64 {
+  margin-left: 16rem;
+  margin-right: 16rem;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -711,6 +716,10 @@ video {
 
 .mb-1 {
   margin-bottom: 0.25rem;
+}
+
+.mb-10 {
+  margin-bottom: 2.5rem;
 }
 
 .mb-12 {
@@ -1165,11 +1174,6 @@ video {
   background-color: rgb(249 250 251 / var(--tw-bg-opacity));
 }
 
-.bg-green-500 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(34 197 94 / var(--tw-bg-opacity));
-}
-
 .bg-pink-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(252 231 243 / var(--tw-bg-opacity));
@@ -1461,6 +1465,11 @@ video {
   color: rgb(0 0 0 / var(--tw-text-opacity));
 }
 
+.text-blue-300 {
+  --tw-text-opacity: 1;
+  color: rgb(147 197 253 / var(--tw-text-opacity));
+}
+
 .text-blue-600 {
   --tw-text-opacity: 1;
   color: rgb(37 99 235 / var(--tw-text-opacity));
@@ -1619,8 +1628,31 @@ video {
   src: url(../fonts/HarmonyOS_Sans_SC_Regular.ttf) format('truetype');
 }
 
+:root {
+  --gradient-from: #3b82f6;
+  /* blue-500 */
+  --gradient-to: #a855f7;
+  /* purple-500 */
+}
+
+.dark {
+  --gradient-from: #1f2937;
+  /* gray-800 */
+  --gradient-to: #4f46e5;
+  /* indigo-700 */
+}
+
+.bg-gradient-custom {
+  background-image: linear-gradient(to top right, var(--gradient-from), var(--gradient-to));
+}
+
+.smooth--trans2 {
+  transition: background-image 0.5s ease-in-out;
+}
+
 .smooth--trans {
   transition-property: all;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
   transition-duration: 300ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1778,11 +1810,6 @@ video {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
 
-.hover\:bg-green-600:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(22 163 74 / var(--tw-bg-opacity));
-}
-
 .hover\:fill-gray-300:hover {
   fill: #d1d5db;
 }
@@ -1824,11 +1851,6 @@ video {
 .hover\:text-gray-700:hover {
   --tw-text-opacity: 1;
   color: rgb(55 65 81 / var(--tw-text-opacity));
-}
-
-.hover\:text-red-700:hover {
-  --tw-text-opacity: 1;
-  color: rgb(185 28 28 / var(--tw-text-opacity));
 }
 
 .hover\:underline:hover {
@@ -2099,6 +2121,12 @@ video {
 .dark\:shadow-zinc-500:is(.dark *) {
   --tw-shadow-color: #71717a;
   --tw-shadow: var(--tw-shadow-colored);
+}
+
+.dark\:backdrop-blur:is(.dark *) {
+  --tw-backdrop-blur: blur(8px);
+  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
 }
 
 .dark\:hover\:bg-gray-300:hover:is(.dark *) {

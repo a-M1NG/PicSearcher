@@ -9,18 +9,21 @@
     <title>管理页</title>
 </head>
 
-<body class="bg-gray-50 dark:bg-gray-900 font-sans_light dark:font-sans_light smooth--trans flex flex-col min-h-screen">
+<body class="bg-gradient-custom font-sans_light dark:font-sans_light smooth--trans2 flex flex-col min-h-screen">
     <script src="../static/js/global.js"></script>
     {% include './modules/navBar.html' %}
     <div id="message" class="mb-4"></div>
 
     <div class="flex-grow px-5 smooth--trans">
-        <div class="relative flex-grow items-center top-20">
-            <p class="text-5xl font-semibold text-gray-800 dark:text-gray-200 text-center">欢迎, {{ Username }}!</p>
+        <div class="relative flex-grow justify-center items-center top-20">
+
+            <p class="text-5xl font-semibold text-gray-800 dark:text-gray-200 text-center mb-10">欢迎, {{ Username }}!</p>
             {% if images %}
-            <p
-                class="text-center cursor-default text-4xl font-light font-sans_light text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-gray-200 smooth--trans">
-                您喜欢的图片</p>
+            <div class="flex justify-center items-center top-20">
+                <p
+                    class="text-center cursor-default text-4xl font-light font-sans_light text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-gray-200 smooth--trans">
+                    您喜欢的图片</p>
+            </div>
             <div class="flex-grow px-5 smooth--trans">
                 <div class="container px-8 py-8 my-28 max-w-none">
                     {% if images %}
@@ -46,52 +49,56 @@
             </div>
             {% else %}
             <p
-                class="text-center cursor-default text-4xl font-light font-sans_light text-blue-600 dark:text-blue-300 hover:text-blue-500 dark:hover:text-gray-200 smooth--trans">
+                class="text-center cursor-default text-4xl font-light font-sans_light text-blue-300 dark:text-blue-300 hover:text-blue-400 dark:hover:text-gray-200 smooth--trans">
                 您暂时没有喜欢的图片，去浏览一下吧~</p>
             {% endif %}
 
             {% if Username == 'admin' %}
-            <div class="px-8 py-8 my-28 max-w-none">
-                <h3 class="text-xl font-medium text-gray-700 dark:text-gray-300">用户管理</h3>
-                <div class="mt-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md smooth--trans">
-                    <ul class="space-y-4" id="userList">
-                        {% for user in users %}
-                        <li
-                            class="flex p-3 rounded-lg items-center justify-between bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 smooth--trans">
-                            <span class="text-gray-800 dark:text-gray-200 text-xl cursor-default">{{ user.username
-                                }}</span>
-                            <div class="space-x-2">
-                                {%if user.username != 'admin'%}
-                                <button onclick="deleteUser('{{ user.id }}')"
-                                    class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg">删除用户</button>
-                                {%else%}
-                                <!--“当前用户”-->
-                                <button
-                                    class="px-3 py-1 bg-gray-400 drak:bg-gray-600 text-white rounded-lg cursor-default">当前用户</button>
-                                {%endif%}
-                            </div>
-                        </li>
-                        {% endfor %}
-                        <!--添加用户逻辑-->
-                        <li class='flex items-center justify-center'>
-                            <button id="addUserBtn"
-                                class="px-4 py-2 w-20 h-full text-2xl bg-blue-500 text-white rounded-full hover:bg-blue-600 smooth--trans">
-                                +
-                            </button>
-                            <div id="addUserForm" class="hidden mt-4">
-                                <form id="registerForm" class="flex flex-col space-y-4">
-                                    <input type="text" name="username" placeholder="用户名" required
-                                        class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                    <input type="password" name="password" placeholder="密码" required
-                                        class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                    <button type="submit"
-                                        class=" text-white px-4 py-2  bg-blue-500  rounded-full hover:bg-blue-600 smooth--trans focus:outline-none">
-                                        添加用户
-                                    </button>
-                                </form>
-                            </div>
-                        </li>
-                    </ul>
+            <div class="flex-grow px-5 smooth--trans">
+                <div class="px-8 py-8 my-28 max-w-none mx-64">
+                    <div class="flex justify-center items-center top-20">
+                        <p class="text-5xl font-medium text-gray-700 dark:text-gray-300">用户管理</p>
+                    </div>
+                    <div class="mt-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md smooth--trans">
+                        <ul class="space-y-4" id="userList">
+                            {% for user in users %}
+                            <li
+                                class="flex p-3 rounded-lg items-center justify-between bg-white dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 smooth--trans">
+                                <span class="text-gray-800 dark:text-gray-200 text-xl cursor-default">{{ user.username
+                                    }}</span>
+                                <div class="space-x-2">
+                                    {%if user.username != 'admin'%}
+                                    <button onclick="deleteUser('{{ user.id }}')"
+                                        class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg">删除用户</button>
+                                    {%else%}
+                                    <!--“当前用户”-->
+                                    <button
+                                        class="px-3 py-1 bg-gray-400 drak:bg-gray-600 text-white rounded-lg cursor-default">当前用户</button>
+                                    {%endif%}
+                                </div>
+                            </li>
+                            {% endfor %}
+                            <!--添加用户逻辑-->
+                            <li class='flex items-center justify-center'>
+                                <button id="addUserBtn"
+                                    class="px-4 py-2 w-20 h-full text-2xl bg-blue-500 text-white rounded-full hover:bg-blue-600 smooth--trans">
+                                    +
+                                </button>
+                                <div id="addUserForm" class="hidden mt-4">
+                                    <form id="registerForm" class="flex flex-col space-y-4">
+                                        <input type="text" name="username" placeholder="用户名" required
+                                            class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <input type="password" name="password" placeholder="密码" required
+                                            class="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                        <button type="submit"
+                                            class=" text-white px-4 py-2  bg-blue-500  rounded-full hover:bg-blue-600 smooth--trans focus:outline-none">
+                                            添加用户
+                                        </button>
+                                    </form>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             {% endif %}
