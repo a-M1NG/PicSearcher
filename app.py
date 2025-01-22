@@ -251,12 +251,14 @@ def get_galleries(page, per_page):
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     offset = (page - 1) * per_page
-    query = "SELECT name FROM gallery LIMIT %s OFFSET %s"
+    query = "SELECT name,r18 FROM gallery LIMIT %s OFFSET %s"
     cursor.execute(query, (per_page, offset))
     results = cursor.fetchall()
     conn.close()
     print(results)
-    return [row[0] for row in results if isGalleyExist(row[0])]
+    return [
+        row[0] for row in results if isGalleyExist(row[0]) and (SHOW_R18 or row[1] == 0)
+    ]
 
 
 @app.route("/gallery_cover/<gallery_name>/")
@@ -273,8 +275,6 @@ def get_gallery_cover(gallery_name):
     if not os.path.exists(filepath):
         return send_file("static/imgs/sample1.jpg")
     img_io, mimetype = ImageResizer(filepath, 1000, 1000)
-    return cached_response(send_file(img_io, mimetype=mimetype))
-    img_io, mimetype = ImageResizer(filepath, 800, 800)
     # 添加缓存头
     response = make_response(send_file(img_io, mimetype=mimetype))
     response.cache_control.max_age = 3600  # 缓存 1 小时

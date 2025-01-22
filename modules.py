@@ -18,6 +18,8 @@ config.read(config_path)
 # MySQL配置
 DB_CONFIG = dict(config["DB_CONFIG"])
 IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
+SHOW_R18 = bool(int(dict(config["IMAGE"])["show_r18"]))
+print(f"Configs:\nShowing nsfw:{SHOW_R18}")
 
 
 # 用户表单
@@ -177,7 +179,11 @@ def isGalleyExist(gallery_name):
 def get_galleries_count():
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM gallery")
+    if SHOW_R18:
+        query = "SELECT COUNT(*) FROM gallery"
+    else:
+        query = "SELECT COUNT(*) FROM gallery WHERE r18 = 0"
+    cursor.execute(query)
     result = cursor.fetchone()
     conn.close()
     return result[0]
@@ -220,7 +226,7 @@ def search_images_by_tags(tags, exact_match):
         # 精确匹配标签
         placeholders = ", ".join(["%s"] * len(tags))  # 为每个标签生成占位符
         query = f"""
-        SELECT image.filepath
+        SELECT image.filepath, image.r18
         FROM image
         JOIN image_tag ON image.id = image_tag.image_id
         JOIN tag ON image_tag.tag_id = tag.id
@@ -237,7 +243,7 @@ def search_images_by_tags(tags, exact_match):
         for tag in tags:
             queries.append(
                 f"""
-            SELECT image.filepath
+            SELECT image.filepath, image.r18
             FROM image
             JOIN image_tag ON image.id = image_tag.image_id
             JOIN tag ON image_tag.tag_id = tag.id
@@ -261,7 +267,11 @@ def search_images_by_tags(tags, exact_match):
 
     conn.close()
     print(len(results))
-    return [calculate_image_hash(row[0]) for row in results if os.path.exists(row[0])]
+    return [
+        calculate_image_hash(row[0])
+        for row in results
+        if os.path.exists(row[0]) and (SHOW_R18 or row[1] == 0)
+    ]
 
 
 def get_image_id_by_hash(image_hash):

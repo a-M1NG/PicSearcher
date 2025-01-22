@@ -5,10 +5,10 @@ from tqdm import tqdm
 
 # 定义图片文件夹路径列表
 PATHS = [
-    r"F:\telegram",
-    r"C:\Data\Programming\Learnpython\Crawl",
-    r"C:\Data\Programming\Learnpython\images\AT_Dan",
-    r"C:\Data\Photos",
+    r"/media/ming/Gametelegram",
+    r"/media/ming/Windows/Data/Programming/Learnpython/Crawl",
+    r"/media/ming/Windows/Data/Programming/Learnpython/images/AT_Dan",
+    r"/media/ming/Windows/Data/Photos",
 ]  # 在这里添加你的图片文件夹路径
 
 # MySQL数据库配置
@@ -97,11 +97,11 @@ def import_images_with_tags(tags: list[str]):
                     absolute_path = os.path.abspath(os.path.join(root, filename))
                     # 只在第一次插入相册
                     if first:
-                        gallery_name = absolute_path.split("\\")[-2]
+                        gallery_name = absolute_path.split("/")[-2]
                         tqdm.write(f"\ninserting gallery: {gallery_name}\n")
                         # 插入相册到 gallery 表
                         cursor.execute(
-                            "INSERT IGNORE INTO gallery (name) VALUES (%s)",
+                            "INSERT IGNORE INTO gallery (name, r18) VALUES (%s, 1)",
                             (gallery_name,),
                         )
                         gallery_id = cursor.lastrowid
@@ -137,14 +137,14 @@ def import_images_with_tags(tags: list[str]):
 
                         # 插入图片路径到 images 表
                         cursor.execute(
-                            "INSERT INTO image (filepath, hash) VALUES (%s, %s)",
+                            "INSERT INTO image (filepath, hash, r18) VALUES (%s, %s, 1)",
                             (absolute_path, calculate_image_hash(absolute_path)),
                         )
                         image_id = cursor.lastrowid
-                        print(f"inserting picture {absolute_path}")
-                        print(
-                            f"constrcting gallery {gallery_name} where {gallery_id}:{absolute_path},{image_id}"
-                        )
+                        # print(f"inserting picture {absolute_path}")
+                        # print(
+                        #     f"constrcting gallery {gallery_name} where {gallery_id}:{absolute_path},{image_id}"
+                        # )
                         cursor.execute(
                             "INSERT INTO gallery_image (image_id, gallery_id) VALUES (%s, %s)",
                             (image_id, gallery_id),
