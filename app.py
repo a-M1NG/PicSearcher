@@ -259,7 +259,7 @@ def get_gallery_cover(gallery_name):
     filepath = get_image_path_by_hash(filehash)
     if not os.path.exists(filepath):
         return send_file("static/imgs/sample1.jpg")
-    img_io, mimetype = ImageResizer(filepath, 1000, 1000)
+    img_io, mimetype = ImageResizer(filepath, 700, 700)
     return send_file(img_io, mimetype=mimetype)
 
 
