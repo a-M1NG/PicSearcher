@@ -1,88 +1,98 @@
 <div id="image-{{ image.id }}"
-    class="flex flex-row relative backdrop-blur-sm bg-white dark:bg-gray-800 rounded-3xl shadow-lg overflow-hidden group sm:w-96 sm:h-40 lg:w-[480px] lg:h-[240px] xl:w-[560px] xl:h-[280px]">
+     class="flex flex-row relative backdrop-blur-sm bg-white dark:bg-gray-800 rounded-3xl shadow-lg overflow-hidden group sm:w-96 sm:h-40 lg:w-[480px] lg:h-[240px] xl:w-[560px] xl:h-[280px]">
     <!-- Image Area -->
-    <div
-        class="bg-gray-300 dark:bg-gray-700 flex-shrink-0 h-full w-1/2 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 relative group smooth--trans group/image-content">
-        <img src="{{ url_for('get_image', image_hash=image.filehash) }}" alt="Image"
-            class="absolute inset-0 w-full h-full object-scale-down rounded-t-lg rounded-l-lg rounded-tr-none group-hover:opacity-80 smooth--trans  relative"
-            onclick="openModal('{{ url_for('get_original_image', image_hash=image.filehash) }}', '{{ image.filehash }}')" />
+    <div class="bg-gray-300 dark:bg-gray-700 flex-shrink-0 h-full w-1/2 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 relative group smooth--trans group/image-content">
+        <img src="{{ url_for('get_image', image_hash=image.filehash) }}"
+             alt="Image"
+             class="absolute inset-0 w-full h-full object-scale-down rounded-t-lg rounded-l-lg rounded-tr-none group-hover:opacity-80 smooth--trans  relative"
+             onclick="openModal('{{ url_for('get_original_image', image_hash=image.filehash) }}', '{{ image.filehash }}')" />
         <!-- heart shape -->
         <div class="absolute bottom-3 right-3">
             {% if image.like %}
-            <button id="like-btn-{{ image.id }}" class="w-7 h-7 rounded-full bg-transparent smooth--trans outline-none"
-                onclick="toggleLike({{image.id}})">
-                <img id="heart-{{ image.id }}" src="../static/imgs/heart-filled.svg" alt="heart"
-                    class="hover:opacity-70 smooth--trans" />
-            </button>
+                <button id="like-btn-{{ image.id }}"
+                        class="w-7 h-7 rounded-full bg-transparent smooth--trans outline-none"
+                        onclick="toggleLike({{ image.id }})">
+                    <img id="heart-{{ image.id }}"
+                         src="../static/imgs/heart-filled.svg"
+                         alt="heart"
+                         class="hover:opacity-70 smooth--trans" />
+                </button>
             {% else %}
-            <button id="like-btn-{{ image.id }}"
-                class="w-7 h-7 rounded-full bg-transparent opacity-0 group-hover/image-content:opacity-100 smooth--trans outline-none"
-                onclick="toggleLike({{image.id}})">
-                <img id="heart-{{ image.id }}" src="../static/imgs/heart.svg" alt="heart"
-                    class="hover:opacity-50 smooth--trans" />
-            </button>
+                <button id="like-btn-{{ image.id }}"
+                        class="w-7 h-7 rounded-full bg-transparent opacity-0 group-hover/image-content:opacity-100 smooth--trans outline-none"
+                        onclick="toggleLike({{ image.id }})">
+                    <img id="heart-{{ image.id }}"
+                         src="../static/imgs/heart.svg"
+                         alt="heart"
+                         class="hover:opacity-50 smooth--trans" />
+                </button>
             {% endif %}
         </div>
     </div>
-
     <!-- Tags Area -->
-    <div
-        class="flex flex-col relative z-0 h-full justify-start bg-blue-100 dark:bg-blue-900 px-2 py-1 w-1/2 group-hover:bg-blue-50 dark:group-hover:bg-blue-800 smooth--trans rounded-b-lg rounded-r-lg rounded-bl-none group/tag-area">
+    <div class="flex flex-col relative z-0 h-full justify-start bg-blue-100 dark:bg-blue-900 px-2 py-1 w-1/2 group-hover:bg-blue-50 dark:group-hover:bg-blue-800 smooth--trans rounded-b-lg rounded-r-lg rounded-bl-none group/tag-area">
         <div id="image-{{ image.id }}-tags"
-            class="flex flex-wrap gap-2 overflow-y-hidden group-hover:overflow-y-auto scrollbar-hide">
+             class="flex flex-wrap gap-2 overflow-y-hidden group-hover:overflow-y-auto scrollbar-hide">
             {% for tag in image.tags %}
-            <div id="tag-{{ tag }}-{{ image.id }}" class="flex items-center justify-center relative group/tag-content">
-                <span
-                    class="bg-white h-9 w-auto hover:bg-gray-200 cursor-pointer dark:bg-gray-600 dark:hover:bg-gray-500 smooth--trans text-black dark:text-white px-3 rounded-full text-base font-medium flex justify-center items-center relative"
-                    onclick="addTag('{{ tag }}')">
-                    {{ tag }}
-                </span>
-                <!-- delete tag button -->
-                <button
-                    class="absolute -top-2.5 -right-3 flex h-full items-center pr-1 pl-0.5 hidden group-hover/tag-content:block"
-                    onclick="deleteTag( {{image.id}}, '{{ tag }}' )">
-                    <svg class="w-5 fill-gray-400 text-gray-600 hover:text-gray-600 hover:fill-gray-300 transition-colors duration-300"
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                </button>
-            </div>
+                <div id="tag-{{ tag }}-{{ image.id }}"
+                     class="flex items-center justify-center relative group/tag-content">
+                    <span class="bg-white h-9 w-auto hover:bg-gray-200 cursor-pointer dark:bg-gray-600 dark:hover:bg-gray-500 smooth--trans text-black dark:text-white px-3 rounded-full text-base font-medium flex justify-center items-center relative"
+                          onclick="addTag('{{ tag }}')">{{ tag }}</span>
+                    <!-- delete tag button -->
+                    <button class="absolute -top-2.5 -right-3 flex h-full items-center pr-1 pl-0.5 hidden group-hover/tag-content:block"
+                            onclick="deleteTag( {{ image.id }}, '{{ tag }}' )">
+                        <svg class="w-5 fill-gray-400 text-gray-600 hover:text-gray-600 hover:fill-gray-300 transition-colors duration-300"
+                             xmlns="http://www.w3.org/2000/svg"
+                             fill="none"
+                             viewBox="0 0 24 24"
+                             stroke-width="1.5"
+                             stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                    </button>
+                </div>
             {% endfor %}
             <!-- Add Tag Button and Input -->
             <div id="AddTag" class="flex items-center">
                 <!-- + Button appears when hovering over the tag area -->
                 <div class="flex items-center justify-center">
                     <button id="add-tag-btn-{{ image.id }}"
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-extralight rounded-full h-8 w-8 focus:outline-none group-hover/tag-area:opacity-100 opacity-0 smooth--trans"
-                        onclick="showTagInput({{ image.id }})">
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-extralight rounded-full h-8 w-8 focus:outline-none group-hover/tag-area:opacity-100 opacity-0 smooth--trans"
+                            onclick="showTagInput({{ image.id }})">
                         <div class="flex justify-center items-center w-full h-full">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                                stroke="currentColor" class="w-5 h-5">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke-width="1.5"
+                                 stroke="currentColor"
+                                 class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                             </svg>
                         </div>
                     </button>
                 </div>
-
-
                 <!-- Input Area -->
                 <div id="tag-input-area-{{ image.id }}"
-                    class="hidden flex flex-row items-center justify-center relative">
-                    <input id="new-tag-input-{{ image.id }}" type="text"
-                        class="h-8 w-40 pl-2 pr-7 border rounded-full text-gray-900 dark:text-white bg-white hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none smooth--trans"
-                        placeholder="输入新标签" />
-                    <button id="submit-tag-btn-{{ image.id }}" type="submit"
-                        class="absolute top-0 right-1 flex mt-1 mb-1 h-6 w-6 justify-center items-center bg-transparent text-white font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 border-0 border-sky-200 transition-all duration-300 ease-in-out"
-                        onclick=" submitTag({{ image.id }})"><svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                            viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5">
+                     class="hidden flex flex-row items-center justify-center relative">
+                    <input id="new-tag-input-{{ image.id }}"
+                           type="text"
+                           class="h-8 w-40 pl-2 pr-7 border rounded-full text-gray-900 dark:text-white bg-white hover:bg-gray-200 dark:bg-gray-600 dark:hover:bg-gray-500 focus:outline-none smooth--trans"
+                           placeholder="输入新标签" />
+                    <button id="submit-tag-btn-{{ image.id }}"
+                            type="submit"
+                            class="absolute top-0 right-1 flex mt-1 mb-1 h-6 w-6 justify-center items-center bg-transparent text-white font-bold rounded-full hover:bg-gray-300 active:bg-gray-400 border-0 border-sky-200 transition-all duration-300 ease-in-out"
+                            onclick=" submitTag({{ image.id }})">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             fill="none"
+                             viewBox="0 0 24 24"
+                             stroke-width="1.5"
+                             stroke="currentColor"
+                             class="w-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                         </svg>
                     </button>
                 </div>
             </div>
         </div>
-
     </div>
 </div>

@@ -1,3 +1,4 @@
+from concurrent.futures import thread
 from flask import (
     Flask,
     jsonify,
@@ -9,6 +10,7 @@ from flask import (
     send_file,
     session,
     abort,
+    make_response,
 )
 from flask_bcrypt import Bcrypt
 from flask_login import (
@@ -22,13 +24,21 @@ import mysql.connector
 import os
 import random
 from modules import *
+from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
 app.secret_key = "supersecret"
 bcrypt = Bcrypt(app)  # 用于加密密码
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
-HOSTS = ["192.168.137.1", "localhost", "118.202.40.143"]
+HOSTS = ["192.168.137.1", "127.0.0.1", "118.202.40.143"]
+
+
+@app.after_request
+def add_cache_headers(response):
+    if "static/" in request.path:
+        response.cache_control.max_age = 86400  # 缓存一天
+    return response
 
 
 @login_manager.user_loader
@@ -76,7 +86,7 @@ def search():
 
     # 获取当前页码，默认为第1页
     page = request.args.get("page", 1, type=int)
-    per_page = 36  # 每页显示的图片数量，可根据需要调整
+    per_page = IMG_PER_PG  # 每页显示的图片数量，可根据需要调整
 
     if request.method == "POST":
         tags = request.form.get("tags").split(",")  # 获取用户输入的标签
@@ -142,7 +152,10 @@ def get_image(image_hash):
         abort(404)
 
     img_io, mimetype = ImageResizer(file_path, 500, 500)
-    return send_file(img_io, mimetype=mimetype)
+    # 添加缓存头
+    response = make_response(send_file(img_io, mimetype=mimetype))
+    response.cache_control.max_age = 3600  # 缓存 1 小时
+    return response
 
 
 @app.route("/get_image_tags/<image_hash>/")
@@ -198,7 +211,7 @@ def into_gallery(gallery_name):
     total_images = get_gallery_images_count(gallery_name)
     print(f"gallery_name: {gallery_name}, total_images: {total_images}")
     # 每页显示的最大图片数量
-    images_per_page = 36
+    images_per_page = IMG_PER_PG
 
     # 总页数
     total_pages = (total_images + images_per_page - 1) // images_per_page
@@ -243,6 +256,7 @@ def get_galleries(page, per_page):
     cursor.execute(query, (per_page, offset))
     results = cursor.fetchall()
     conn.close()
+    print(results)
     return [row[0] for row in results if isGalleyExist(row[0])]
 
 
@@ -251,16 +265,20 @@ def get_galleries(page, per_page):
 def get_gallery_cover(gallery_name):
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
-    query = "SELECT i.hash FROM image i JOIN gallery_image gi on i.id = gi.image_id JOIN gallery g on gi.gallery_id = g.id WHERE g.name = %s"
+    query = "SELECT i.hash FROM image i JOIN gallery_image gi on i.id = gi.image_id JOIN gallery g on gi.gallery_id = g.id WHERE g.name = %s LIMIT 1"
     cursor.execute(query, (gallery_name,))
     result = cursor.fetchone()
     conn.close()
-    filehash = random.choice(result)  # select a random image from the gallery as cover
+    filehash = result[0]
     filepath = get_image_path_by_hash(filehash)
     if not os.path.exists(filepath):
         return send_file("static/imgs/sample1.jpg")
-    img_io, mimetype = ImageResizer(filepath, 700, 700)
-    return send_file(img_io, mimetype=mimetype)
+    img_io, mimetype = ImageResizer(filepath, 800, 800)
+    # 添加缓存头
+    response = make_response(send_file(img_io, mimetype=mimetype))
+    response.cache_control.max_age = 3600  # 缓存 1 小时
+    return response
+    # return send_file(img_io, mimetype=mimetype)
 
 
 # 登录页面路由
@@ -421,4 +439,5 @@ def page_not_found(e):
 
 if __name__ == "__main__":
     # Talisman(app, force_https=True)
+    WSGIRequestHandler.protocol_version = "HTTP/1.1"
     app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
