@@ -17,6 +17,7 @@ config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.i
 config.read(config_path)
 # MySQL配置
 DB_CONFIG = dict(config["DB_CONFIG"])
+IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
 
 
 # 用户表单
@@ -168,6 +169,8 @@ def isGalleyExist(gallery_name):
     cursor.execute(query, (gallery_name,))
     result = cursor.fetchone()
     conn.close()
+    if not result:
+        return False
     return os.path.exists(get_image_path_by_hash(result[0]))
 
 
