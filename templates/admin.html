@@ -7,6 +7,104 @@
     <link href="../static/css/main.css" rel="stylesheet">
     <link rel="shortcut icon" href="../static/imgs/admin.svg" type="image/x-icon">
     <title>管理页</title>
+    <style>
+        @keyframes zoom {
+            from {
+                transform: scale(0)
+            }
+
+            to {
+                transform: scale(1)
+            }
+        }
+
+        /* 关闭按钮样式 */
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* 响应式调整 */
+
+        @media only screen and (max-width: 700px) {
+            .modal-content {
+                width: 100%;
+            }
+        }
+
+        .tags {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .tag {
+            display: inline-block;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+
+        /* Hide scrollbar arrows */
+
+        /* Scrollbar track */
+
+        ::-webkit-scrollbar-track {
+            background-color: transparent;
+            /* Transparent track background */
+        }
+
+        /* Scrollbar thumb (the draggable part) */
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(103, 103, 103, 0.721);
+            /* Semi-transparent thumb */
+            border-radius: 10px;
+            /* Rounded corners */
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            /* Set scrollbar width */
+            background-color: transparent;
+            /* Transparent background for scrollbar */
+        }
+
+        /* Hide scrollbar arrows */
+
+        ::-webkit-scrollbar-button {
+            display: none;
+            /* Hide the up and down arrows */
+        }
+
+        /* 隐藏滚动条但保留占位 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+            /* 隐藏滚动条 */
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            /* IE和Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+    </style>
 </head>
 
 <body class="bg-gradient-custom font-sans_light dark:font-sans_light smooth--trans2 flex flex-col min-h-screen">

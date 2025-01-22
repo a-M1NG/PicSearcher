@@ -44,6 +44,11 @@ class MImage:
         self.like = like
 
 
+def cached_response(response, seconds=3600 * 24):
+    response.headers["Cache-Control"] = f"public, max-age={seconds}"  # 设置缓存时间
+    return response
+
+
 def is_phone(request):
     user_agent = request.headers.get("User-Agent", "").lower()
     # 检查用户代理中是否包含常见的手机标识

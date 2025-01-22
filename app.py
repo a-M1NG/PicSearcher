@@ -136,13 +136,12 @@ def search():
 @app.route("/images/<image_hash>/")
 @login_required
 def get_image(image_hash):
-    # 通过哈希值映射回图片ID
     file_path = get_image_path_by_hash(image_hash)
     if not file_path:
         abort(404)
 
     img_io, mimetype = ImageResizer(file_path, 500, 500)
-    return send_file(img_io, mimetype=mimetype)
+    return cached_response(send_file(img_io, mimetype=mimetype), 3600 * 24)
 
 
 @app.route("/get_image_tags/<image_hash>/")
@@ -260,7 +259,7 @@ def get_gallery_cover(gallery_name):
     if not os.path.exists(filepath):
         return send_file("static/imgs/sample1.jpg")
     img_io, mimetype = ImageResizer(filepath, 1000, 1000)
-    return send_file(img_io, mimetype=mimetype)
+    return cached_response(send_file(img_io, mimetype=mimetype))
 
 
 # 登录页面路由
