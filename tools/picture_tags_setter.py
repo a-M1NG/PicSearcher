@@ -5,10 +5,7 @@ from tqdm import tqdm
 
 # 定义图片文件夹路径列表
 PATHS = [
-    r"/media/ming/Gametelegram",
-    r"/media/ming/Windows/Data/Programming/Learnpython/Crawl",
-    r"/media/ming/Windows/Data/Programming/Learnpython/images/AT_Dan",
-    r"/media/ming/Windows/Data/Photos",
+    r"/media/ming/Game/telegram",
 ]  # 在这里添加你的图片文件夹路径
 
 # MySQL数据库配置
@@ -98,13 +95,21 @@ def import_images_with_tags(tags: list[str]):
                     # 只在第一次插入相册
                     if first:
                         gallery_name = absolute_path.split("/")[-2]
-                        tqdm.write(f"\ninserting gallery: {gallery_name}\n")
-                        # 插入相册到 gallery 表
                         cursor.execute(
-                            "INSERT IGNORE INTO gallery (name, r18) VALUES (%s, 1)",
-                            (gallery_name,),
+                            "SELECT id FROM gallery WHERE name = %s", (gallery_name,)
                         )
-                        gallery_id = cursor.lastrowid
+                        res = cursor.fetchone()
+                        if res:
+                            tqdm.write(f"gallery {gallery_name} already exists!")
+                            gallery_id = res[0]
+                        else:
+                            tqdm.write(f"inserting gallery: {gallery_name}")
+                            # 插入相册到 gallery 表
+                            cursor.execute(
+                                "INSERT IGNORE INTO gallery (name, r18) VALUES (%s, 1)",
+                                (gallery_name,),
+                            )
+                            gallery_id = cursor.lastrowid
                         first = False
                     # 对应的标签文件路径
                     tag_root = os.path.join(root, "tags")

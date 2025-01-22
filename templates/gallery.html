@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN" {% if darkmode %}class="dark"{% endif %}>
     <head>
-        <title>相册</title>
+        {% if not ingallery %}
+            <title>相册</title>
+        {% else %}
+            <title>{{ gallery_name }} - pg{{ current_page }}</title>
+        {% endif %}
         <link href="../static/css/main.css" rel="stylesheet">
         <!-- <link href="{{url_for('static',filename='css/main.css')}}" rel="stylesheet"> -->
         <link rel="shortcut icon"
@@ -148,7 +152,8 @@
                                     </div>
                                     <div class="mt-2 text-lg font-bold text-center w-auto">
                                         <a href="{{ url_for('into_gallery', gallery_name=gallery) }}">
-                                            <span class="cursor-pointer  smooth--trans text-gray-600 dark:text-gray-400 hover:underline hover:text-gray-500 dark:hover:text-gray-300">{{ gallery }}</span>
+                                            <span class="cursor-pointer  smooth--trans text-gray-600 dark:text-gray-400 hover:underline hover:text-gray-500 dark:hover:text-gray-300">{{
+                                            gallery }}</span>
                                         </a>
                                     </div>
                                 </div>
@@ -186,7 +191,7 @@
                             <!-- Display "No Results" when no images found -->
                             <div class="flex flex-col items-center justify-center text-center">
                                 <p class="text-2xl font-semibold text-gray-600 dark:text-gray-300">对于给定的关键字"{{ init_tags }}"无结果</p>
-                                <a href="{{ url_for("index") }}"
+                                <a href="{{ url_for(" index") }}"
                                    class="mt-4 px-6 py-2 text-white bg-blue-500 hover:bg-blue-600 rounded-full smooth--trans">
                                     返回
                                 </a>
@@ -300,59 +305,61 @@
                         <!--if4-->
                         {% if current_page < total_pages - 2 %}
                             <!--if5-->
-                            {% if current_page < total_pages - 3 %}<span class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>{% endif %}
-                            <!--if5-->
-                            <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=total_pages) }}"
-                               class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ total_pages }}</a>
-                        {% endif %}
-                        <!--if4-->
-                    {% else %}
-                        <!--if1-->
-                        {% for page_num in range(1, total_pages + 1) %}
-                            {% if page_num == current_page %}
-                                <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
-                            {% else %}
-                                <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=page_num) }}"
-                                   class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ page_num }}</a>
+                            {% if current_page < total_pages - 3 %}
+                                <span class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>{%
+                                endif %}
+                                <!--if5-->
+                                <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=total_pages) }}"
+                                   class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ total_pages }}</a>
                             {% endif %}
-                        {% endfor %}
+                            <!--if4-->
+                        {% else %}
+                            <!--if1-->
+                            {% for page_num in range(1, total_pages + 1) %}
+                                {% if page_num == current_page %}
+                                    <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
+                                {% else %}
+                                    <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=page_num) }}"
+                                       class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ page_num }}</a>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        <!--if1-->
+                        {% if current_page < total_pages %}
+                            <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=current_page+1) }}"
+                               class="px-3 py-1 mx-1 rounded bg-gray-200  hover:bg-blue-300">下一页</a>
+                        {% endif %}
+                    </div>
+                    <!-- Jump to page input -->
+                    {% if total_pages > 1 %}
+                        <form action="{{ url_for('into_gallery' ,gallery_name=gallery_name) }}"
+                              method="get"
+                              class="ml-4 mt-2">
+                            <input type="number"
+                                   name="page"
+                                   min="1"
+                                   max="{{ total_pages }}"
+                                   value="{{ current_page }}"
+                                   class="px-3 py-1 mx-1 bg-gray-200 rounded"
+                                   style="width: 60px">
+                            <button type="submit" class="px-3 py-1 bg-gray-200 rounded hover:bg-blue-300">Go</button>
+                        </form>
                     {% endif %}
-                    <!--if1-->
-                    {% if current_page < total_pages %}
-                        <a href="{{ url_for('into_gallery',gallery_name=gallery_name, page=current_page+1) }}"
-                           class="px-3 py-1 mx-1 rounded bg-gray-200  hover:bg-blue-300">下一页</a>
-                    {% endif %}
-                </div>
-                <!-- Jump to page input -->
-                {% if total_pages > 1 %}
-                    <form action="{{ url_for('into_gallery' ,gallery_name=gallery_name) }}"
-                          method="get"
-                          class="ml-4 mt-2">
-                        <input type="number"
-                               name="page"
-                               min="1"
-                               max="{{ total_pages }}"
-                               value="{{ current_page }}"
-                               class="px-3 py-1 mx-1 bg-gray-200 rounded"
-                               style="width: 60px">
-                        <button type="submit" class="px-3 py-1 bg-gray-200 rounded hover:bg-blue-300">Go</button>
-                    </form>
                 {% endif %}
-            {% endif %}
-            <!-- Copyright -->
-            <div class="mt-2">
-                <a href="https://github.com/a-M1NG/PicSearcher"
-                   class="text-gray-400 font-semibold hover:underline hover:text-blue-400"
-                   title="前往GitHub">© M1NG</a>
+                <!-- Copyright -->
+                <div class="mt-2">
+                    <a href="https://github.com/a-M1NG/PicSearcher"
+                       class="text-gray-400 font-semibold hover:underline hover:text-blue-400"
+                       title="前往GitHub">© M1NG</a>
+                </div>
+            </footer>
+            <div id="myModal" class="modal" onclick="closeModal(event)">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <img class="modal-content" id="modalImage">
+                <div id="tagsContainer" class="tags"></div>
             </div>
-        </footer>
-        <div id="myModal" class="modal" onclick="closeModal(event)">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <img class="modal-content" id="modalImage">
-            <div id="tagsContainer" class="tags"></div>
-        </div>
-        <script src="../static/js/global.js"></script>
-        <script>
+            <script src="../static/js/global.js"></script>
+            <script>
         let scale = 1; // 初始化缩放比例
         const modalImage = document.getElementById("modalImage");
 
@@ -404,6 +411,6 @@
             }
             modalImage.style.transform = `scale(${scale})`;
         });
-        </script>
-    </body>
-</html>
+            </script>
+        </body>
+    </html>

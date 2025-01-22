@@ -19,7 +19,7 @@ config.read(config_path)
 DB_CONFIG = dict(config["DB_CONFIG"])
 IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
 SHOW_R18 = bool(int(dict(config["IMAGE"])["show_r18"]))
-print(f"Configs:\nShowing nsfw:{SHOW_R18}")
+print(f"Configs:\nShowing nsfw: {SHOW_R18}")
 
 
 # 用户表单
