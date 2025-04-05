@@ -27,11 +27,13 @@ from modules import *
 from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400
 app.secret_key = "supersecret"
 bcrypt = Bcrypt(app)  # 用于加密密码
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 HOSTS = ["192.168.137.1", "127.0.0.1", "118.202.40.143"]
+ALL_GALLERIES = get_all_galleries()
 
 
 @app.after_request
@@ -146,14 +148,11 @@ def search():
 @app.route("/images/<image_hash>/")
 @login_required
 def get_image(image_hash):
-    file_path = get_image_path_by_hash(image_hash)
-    if not file_path:
-        abort(404)
-
-    img_io, mimetype = ImageResizer(file_path, 500, 500)
-    # 添加缓存头
-    response = make_response(send_file(img_io, mimetype=mimetype))
-    response.cache_control.max_age = 3600  # 缓存 1 小时
+    thumb_path = get_cache_image_path(image_hash)
+    if not thumb_path:
+        abort(404)  # 不存在图片
+    response = make_response(send_file(thumb_path, mimetype="image/webp"))
+    response.cache_control.max_age = 86400 * 30  # 缓存30天
     return response
 
 
@@ -183,6 +182,9 @@ def gallery():
     galleries = get_galleries(page, per_page)
     total = get_galleries_count()
     total_pages = (total + per_page - 1) // per_page  # 计算总页数
+    if page > total_pages:
+        # 如果请求的页码超过总页数，重定向到最后一页
+        return redirect(url_for("gallery", page=total_pages))
     start_page = max(page - 2, 1)
     end_page = min(page + 2, total_pages)
     return render_template(
@@ -247,18 +249,10 @@ def into_gallery(gallery_name):
 
 @app.route("/galleries/<gallery_name>/")
 @login_required
-def get_galleries(page, per_page):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
+def get_galleries(page, per_page) -> list[str]:
     offset = (page - 1) * per_page
-    query = "SELECT name,r18 FROM gallery LIMIT %s OFFSET %s"
-    cursor.execute(query, (per_page, offset))
-    results = cursor.fetchall()
-    conn.close()
-    print(results)
-    return [
-        row[0] for row in results if isGalleyExist(row[0]) and (SHOW_R18 or row[1] == 0)
-    ]
+    # Use ALL_GALLERIES to get the gallery names
+    return ALL_GALLERIES[offset : offset + per_page]
 
 
 @app.route("/gallery_cover/<gallery_name>/")
@@ -271,12 +265,16 @@ def get_gallery_cover(gallery_name):
     result = cursor.fetchone()
     conn.close()
     filehash = result[0]
-    filepath = get_image_path_by_hash(filehash)
+    # filepath = get_image_path_by_hash(filehash)
+    # if not os.path.exists(filepath):
+    #     return send_file("static/imgs/sample1.jpg")
+    # img_io, mimetype = ImageResizer(filepath, 1000, 1000)
+    filepath = get_cache_image_path(filehash, 1000, 1000)
     if not os.path.exists(filepath):
         return send_file("static/imgs/sample1.jpg")
-    img_io, mimetype = ImageResizer(filepath, 1000, 1000)
+
     # 添加缓存头
-    response = make_response(send_file(img_io, mimetype=mimetype))
+    response = make_response(send_file(filepath, mimetype="image/webp"))
     response.cache_control.max_age = 3600  # 缓存 1 小时
     return response
     # return send_file(img_io, mimetype=mimetype)

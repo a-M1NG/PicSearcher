@@ -19,6 +19,18 @@ config.read(config_path)
 DB_CONFIG = dict(config["DB_CONFIG"])
 IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
 SHOW_R18 = bool(int(dict(config["IMAGE"])["show_r18"]))
+IMAGE_EXTENSIONS = [
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".bmp",
+    ".PNG",
+    ".JPG",
+    ".JPEG",
+    ".WEBP",
+    ".BMP",
+]
 print(f"Configs:\nShowing nsfw: {SHOW_R18}")
 
 
@@ -68,54 +80,85 @@ def is_phone(request):
     return any(agent in user_agent for agent in mobile_agents)
 
 
-def ImageResizer(image_path, max_width=350, max_height=350):
+def ImageResizer(image_path, max_width=350, max_height=350, quality=85):
+    """
+    生成 WebP 格式的缩略图，自动处理透明度和优化压缩。
+
+    参数:
+        image_path (str): 原始图片路径
+        max_width (int): 最大宽度
+        max_height (int): 最大高度
+        quality (int): WebP 压缩质量 (1-100)
+
+    返回:
+        (io.BytesIO, str): 图片二进制流和 MIME 类型
+    """
     with Image.open(image_path) as img:
+        # 计算缩放比例
         width, height = img.size
         ratio = min(max_width / width, max_height / height)
         new_width = int(width * ratio)
         new_height = int(height * ratio)
-        img = img.resize((new_width, new_height), Image.Resampling.BICUBIC)
-        # Determine if the image has transparency
-        has_transparency = False
-        if img.mode in ("RGBA", "LA") or (
-            img.mode == "P" and "transparency" in img.info
-        ):
-            has_transparency = True
 
-        # Decide the target mode based on transparency
+        # 高质量缩放
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # 检查透明度
+        has_transparency = img.mode in ("RGBA", "LA") or (
+            img.mode == "P" and "transparency" in img.info
+        )
+
+        # 转换为 WebP 兼容模式
         if has_transparency:
             img = img.convert("RGBA")
         else:
             img = img.convert("RGB")
 
-        # Attempt to get image format; if not set, infer from file extension
-        img_format = img.format
-        if img_format is None:
-            file_extension = image_path.split(".")[-1].lower()
-            if file_extension == "png":
-                img_format = "PNG"
-            else:
-                img_format = "JPEG"
-
+        # 生成 WebP 二进制流
         img_io = io.BytesIO()
-
-        # Choose the appropriate format and handle transparency
-        if img_format.lower() == "png":
-            img.save(img_io, "PNG")  # Save as PNG to preserve transparency
-            mimetype = "image/png"
-        else:
-            if has_transparency:
-                # If saving as JPEG, need to remove transparency
-                # Optionally, you can provide a background color
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
-                background.save(img_io, "JPEG")
-            else:
-                img.save(img_io, "JPEG")  # Save as JPEG
-            mimetype = "image/jpeg"
-
+        img.save(
+            img_io,
+            "WEBP",
+            quality=quality,
+            method=6,  # 压缩方法 (0=fast, 6=slow but best)
+            lossless=False,  # 启用有损压缩以减小体积
+        )
         img_io.seek(0)
-        return img_io, mimetype
+
+        return img_io, "image/webp"
+
+
+def get_cache_image_path(image_hash, max_width=500, max_height=500):
+    # 生成缩略图路径（格式: thumbs/1e/5c/1e5cxxxxxx.webp）
+    if len(image_hash) < 4:
+        return None
+    thumb_dir = os.path.join(
+        "static", "imgs", "thumbs", image_hash[:2], image_hash[2:4]
+    )
+    thumb_path = os.path.join(thumb_dir, f"{image_hash}.webp")
+
+    # 如果缩略图已存在，直接发送
+    if os.path.exists(thumb_path):
+        return thumb_path
+
+    # 缩略图不存在，生成并保存
+    file_path = get_image_path_by_hash(image_hash)
+    if not file_path:
+        return None
+
+    # 生成缩略图（建议用Pillow直接保存为WebP）
+    from PIL import Image
+
+    img = Image.open(file_path)
+    img.thumbnail((max_width, max_height))
+
+    # 确保目录存在
+    os.makedirs(thumb_dir, exist_ok=True)
+
+    # 保存为WebP（优化质量/大小）
+    img.save(thumb_path, "WEBP", quality=85)
+
+    return thumb_path
 
 
 def get_image_path_by_id(image_id):
@@ -176,6 +219,21 @@ def isGalleyExist(gallery_name):
     return os.path.exists(get_image_path_by_hash(result[0]))
 
 
+def get_all_galleries() -> list[str]:
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    query = "SELECT name,r18 FROM gallery"
+    cursor.execute(query)
+    results = cursor.fetchall()
+    conn.close()
+    # filter out galleries that don't exist or are marked as R18 if SHOW_R18 is False
+    gals = [
+        row[0] for row in results if isGalleyExist(row[0]) and (SHOW_R18 or row[1] == 0)
+    ]
+    print(f"galleries: {gals}")
+    return gals
+
+
 def get_galleries_count():
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
@@ -222,6 +280,7 @@ def search_images_by_tags(tags, exact_match):
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     start_time = time.time()
+    print(f"searching for tags: {tags}")
     if exact_match:
         # 精确匹配标签
         placeholders = ", ".join(["%s"] * len(tags))  # 为每个标签生成占位符
@@ -416,7 +475,7 @@ def fetch_user_liked(uid):
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     query = """
-        SELECT i.hash, i.id
+        SELECT i.hash, i.id, i.r18
         FROM user_liked ul
         JOIN image i ON ul.image_id = i.id
         WHERE ul.uid = %s
@@ -425,7 +484,11 @@ def fetch_user_liked(uid):
     cursor.execute(query, (uid,))
     results = cursor.fetchall()
     conn.close()
-    return [MImage(row[0], get_image_tags(row[0]), row[1], True) for row in results]
+    return [
+        MImage(row[0], get_image_tags(row[0]), row[1], True)
+        for row in results
+        if (SHOW_R18 or row[2] == 0)
+    ]
 
 
 def fetch_user(username):
