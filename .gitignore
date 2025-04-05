@@ -24,11 +24,13 @@ pids/
 *.pid
 *.seed
 *.pid.lock
-
+models
+hf-mirror
 # OS generated files
 .DS_Store
 Thumbs.db
-
+*.index
+static/imgs/thumbs
 # IDEs and editors
 .vscode/
 .idea/
