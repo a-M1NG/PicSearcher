@@ -18,7 +18,6 @@ config.read(config_path)
 # MySQL配置
 DB_CONFIG = dict(config["DB_CONFIG"])
 IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
-SHOW_R18 = bool(int(dict(config["IMAGE"])["show_r18"]))
 IMAGE_EXTENSIONS = [
     ".png",
     ".jpg",
@@ -31,7 +30,6 @@ IMAGE_EXTENSIONS = [
     ".WEBP",
     ".BMP",
 ]
-print(f"Configs:\nShowing nsfw: {SHOW_R18}")
 
 
 # 用户表单
@@ -229,14 +227,11 @@ def isGalleyExist(gallery_name):
 def get_all_galleries() -> list[str]:
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
-    query = "SELECT name,r18 FROM gallery"
+    query = "SELECT name FROM gallery"
     cursor.execute(query)
     results = cursor.fetchall()
     conn.close()
-    # filter out galleries that don't exist or are marked as R18 if SHOW_R18 is False
-    gals = [
-        row[0] for row in results if isGalleyExist(row[0]) and (SHOW_R18 or row[1] == 0)
-    ]
+    gals = [row[0] for row in results if isGalleyExist(row[0])]
     print(f"galleries: {gals}")
     return gals
 
@@ -244,10 +239,7 @@ def get_all_galleries() -> list[str]:
 def get_galleries_count():
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
-    if SHOW_R18:
-        query = "SELECT COUNT(*) FROM gallery"
-    else:
-        query = "SELECT COUNT(*) FROM gallery WHERE r18 = 0"
+    query = "SELECT COUNT(*) FROM gallery"
     cursor.execute(query)
     result = cursor.fetchone()
     conn.close()
@@ -292,7 +284,7 @@ def search_images_by_tags(tags, exact_match):
         # 精确匹配标签
         placeholders = ", ".join(["%s"] * len(tags))  # 为每个标签生成占位符
         query = f"""
-        SELECT image.id, image.filepath, image.r18
+        SELECT image.id, image.filepath
         FROM image
         JOIN image_tag ON image.id = image_tag.image_id
         JOIN tag ON image_tag.tag_id = tag.id
@@ -322,7 +314,7 @@ def search_images_by_tags(tags, exact_match):
             like_patterns.append(f"%{tag}%")
 
         query = f"""
-            SELECT DISTINCT image.id, image.filepath, image.r18
+            SELECT DISTINCT image.id, image.filepath
             FROM image
             WHERE {' AND '.join(exists_clauses)}
             ORDER BY image.id;
@@ -337,11 +329,7 @@ def search_images_by_tags(tags, exact_match):
 
     conn.close()
     # print("找到结果 ", len(results))
-    return [
-        calculate_image_hash(row[1])
-        for row in results
-        if os.path.exists(row[1]) and (SHOW_R18 or row[2] == 0)
-    ]
+    return [calculate_image_hash(row[1]) for row in results if os.path.exists(row[1])]
 
 
 def get_image_id_by_hash(image_hash):
@@ -486,7 +474,7 @@ def fetch_user_liked(uid):
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     query = """
-        SELECT i.hash, i.id, i.r18
+        SELECT i.hash, i.id
         FROM user_liked ul
         JOIN image i ON ul.image_id = i.id
         WHERE ul.uid = %s
@@ -495,11 +483,7 @@ def fetch_user_liked(uid):
     cursor.execute(query, (uid,))
     results = cursor.fetchall()
     conn.close()
-    return [
-        MImage(row[0], get_image_tags(row[0]), row[1], True)
-        for row in results
-        if (SHOW_R18 or row[2] == 0)
-    ]
+    return [MImage(row[0], get_image_tags(row[0]), row[1], True) for row in results]
 
 
 def fetch_user(username):
