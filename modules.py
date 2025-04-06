@@ -232,6 +232,7 @@ def get_all_galleries() -> list[str]:
     results = cursor.fetchall()
     conn.close()
     gals = [row[0] for row in results if isGalleyExist(row[0])]
+    gals.sort()
     print(f"galleries: {gals}")
     return gals
 
@@ -268,6 +269,7 @@ def get_image_tags(image_hash):
     """
     cursor.execute(query, (image_hash,))
     tags = [row[0] for row in cursor.fetchall()]
+    tags.sort()
     conn.close()
     return tags
 
