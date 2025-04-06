@@ -107,7 +107,7 @@ def import_images_with_tags(tags: list[str]):
                             tqdm.write(f"inserting gallery: {gallery_name}")
                             # 插入相册到 gallery 表
                             cursor.execute(
-                                "INSERT IGNORE INTO gallery (name, r18) VALUES (%s, 1)",
+                                "INSERT IGNORE INTO gallery (name) VALUES (%s)",
                                 (gallery_name,),
                             )
                             gallery_id = cursor.lastrowid
