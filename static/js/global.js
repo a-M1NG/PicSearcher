@@ -28,15 +28,37 @@ function addTag(seltags) {
 }
 
 document.getElementById('searchForm').addEventListener('submit', function (event) {
-    const checkbox = document.getElementById('exact_match');
-    if (checkbox.checked) {
-        // 如果复选框被选中，添加一个隐藏的输入到表单中
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'exact_match';
-        hiddenInput.value = 'on'; // 复选框选中时的值
-        this.appendChild(hiddenInput);
+    // 阻止默认提交
+    event.preventDefault();
+
+    // 创建隐藏字段容器
+    const hiddenFields = document.createElement('div');
+
+    // 添加精确匹配状态
+    const exactMatch = document.getElementById('exact_match').checked;
+    if (exactMatch) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'exact_match';
+        input.value = 'on';
+        hiddenFields.appendChild(input);
     }
+
+    // 添加自然语言搜索状态
+    const nlpMatch = document.getElementById('nlp_match').checked;
+    if (nlpMatch) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'nlp_match';  // 注意这里改为与Flask代码一致的名称
+        input.value = 'on';
+        hiddenFields.appendChild(input);
+    }
+
+    // 将隐藏字段添加到表单
+    this.appendChild(hiddenFields);
+
+    // 手动提交表单
+    this.submit();
 });
 // Show the input area when the + button is clicked
 function showTagInput(imageId) {
