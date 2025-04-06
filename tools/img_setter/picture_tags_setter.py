@@ -4,57 +4,58 @@ import hashlib
 from tqdm import tqdm
 
 # 定义图片文件夹路径列表
-PATHS = [
-    r"/media/ming/Game/telegram",
-]  # 在这里添加你的图片文件夹路径
+PATHS = ["/home/ming/Pictures/pixabay_images"]
 
 # MySQL数据库配置
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
     "password": "password",
-    "database": "images",
+    "database": "picSearcher",
 }
 
 # 连接到MySQL数据库
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor()
-tags = set()
-for path in PATHS:
-    for root, dirs, files in os.walk(path):
-        for filename in files:
-            if (
-                filename.endswith(".jpg")
-                or filename.endswith(".png")
-                or filename.endswith(".JPG")
-                or filename.endswith(".PNG")
-                or filename.endswith(".jpeg")
-                or filename.endswith(".JPEG")
-            ):
-                # 获取图片的绝对路径
-                absolute_path = os.path.abspath(os.path.join(root, filename))
 
-                # 对应的标签文件路径
-                tag_root = os.path.join(root, "tags")
-                tag_file = os.path.join(
-                    tag_root,
-                    filename.replace(".jpg", ".txt")
-                    .replace(".png", ".txt")
-                    .replace(".JPG", ".txt")
-                    .replace(".PNG", ".txt")
-                    .replace(".jpeg", ".txt")
-                    .replace(".JPEG", ".txt"),
-                )
 
-                if os.path.exists(tag_file):
-                    with open(tag_file, "r") as f:
-                        for tag in f.read().split(", "):
-                            tags.add(tag.strip())
+def get_tags():
+    tags = set()
+    for path in PATHS:
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                if (
+                    filename.endswith(".jpg")
+                    or filename.endswith(".png")
+                    or filename.endswith(".JPG")
+                    or filename.endswith(".PNG")
+                    or filename.endswith(".jpeg")
+                    or filename.endswith(".JPEG")
+                ):
+                    # 获取图片的绝对路径
+                    absolute_path = os.path.abspath(os.path.join(root, filename))
 
-print(len(tags))
-# for tag in tags:
-#     print(tag, end=" ")
-# print()
+                    # 对应的标签文件路径
+                    tag_root = os.path.join(root, "tags")
+                    tag_file = os.path.join(
+                        tag_root,
+                        filename.replace(".jpg", ".txt")
+                        .replace(".png", ".txt")
+                        .replace(".JPG", ".txt")
+                        .replace(".PNG", ".txt")
+                        .replace(".jpeg", ".txt")
+                        .replace(".JPEG", ".txt"),
+                    )
+
+                    if os.path.exists(tag_file):
+                        with open(tag_file, "r") as f:
+                            for tag in f.read().split(", "):
+                                tags.add(tag.strip())
+
+    print(len(tags))
+
+    return tags
+
 
 # 初始化数据库和表
 
@@ -142,7 +143,7 @@ def import_images_with_tags(tags: list[str]):
 
                         # 插入图片路径到 images 表
                         cursor.execute(
-                            "INSERT INTO image (filepath, hash, r18) VALUES (%s, %s, 1)",
+                            "INSERT INTO image (filepath, hash) VALUES (%s, %s)",
                             (absolute_path, calculate_image_hash(absolute_path)),
                         )
                         image_id = cursor.lastrowid
@@ -166,6 +167,8 @@ def import_images_with_tags(tags: list[str]):
     conn.commit()
 
 
-import_images_with_tags(tags)
+if __name__ == "__main__":
+    tags = get_tags()
+    import_images_with_tags(tags)
 cursor.close()
 conn.close()

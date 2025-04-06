@@ -1,7 +1,7 @@
 #!/bin/bash
 # tagger script by @bdsqlsz
 # Train data path
-train_data_dir="./input" # input images path | 图片输入路径
+train_data_dir="/home/ming/Pictures/pixabay_images" # input images path | 图片输入路径
 repo_id="SmilingWolf/wd-vit-large-tagger-v3" # model repo id from huggingface |huggingface模型repoID
 model_dir="./models" # model dir path | 本地模型文件夹路径
 batch_size=12 # batch size in inference 批处理大小，越大越快
@@ -11,7 +11,7 @@ general_threshold=0.35 # general threshold | 总体识别阈值
 character_threshold=0.1 # character threshold | 人物姓名识别阈值
 remove_underscore=1 # remove_underscore | 下划线转空格，1为开，0为关 
 undesired_tags="" # no need tags | 排除标签
-recursive=0 # search for images in subfolders recursively | 递归搜索下层文件夹，1为开，0为关
+recursive=1 # search for images in subfolders recursively | 递归搜索下层文件夹，1为开，0为关
 frequency_tags=0 # order by frequency tags | 从大到小按识别率排序标签，1为开，0为关
 
 
@@ -62,7 +62,7 @@ if [ "$frequency_tags" -eq 1 ]; then
 fi
 extArgs+=( "--onnx")
 # run tagger
-accelerate launch --num_cpu_threads_per_process=8 "tools/tag_images_by_wd14_tagger.py" \
+accelerate launch --num_cpu_threads_per_process=8 "tools/img_setter/tag_images_by_wd14_tagger.py" \
   $train_data_dir \
   --thresh=$thresh \
   --caption_extension .txt \
