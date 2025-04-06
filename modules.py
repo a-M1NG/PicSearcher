@@ -321,7 +321,7 @@ def search_images_by_tags(tags, exact_match):
             WHERE {' AND '.join(exists_clauses)}
             ORDER BY image.id;
         """
-        print(query)
+        # print(query)
         cursor.execute(query, like_patterns)
         print("fuzzy match")
 

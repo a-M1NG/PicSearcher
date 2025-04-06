@@ -154,7 +154,7 @@ def search():
 
     start_page = max(page - 1, 1)
     end_page = min(page + 1, total_pages)
-
+    page = min(page, total_pages)  # 确保页码不超过总页数
     return render_template(
         "results.html",
         images=images,  # 传递当前页的图片列表
@@ -235,6 +235,8 @@ def gallery():
 @app.route("/gallery-<gallery_name>/")
 @login_required
 def into_gallery(gallery_name):
+    if not isGalleyExist(gallery_name):
+        abort(404)
     # 获取当前页数，默认是第1页
     current_page = request.args.get("page", 1, type=int)
 
@@ -246,7 +248,10 @@ def into_gallery(gallery_name):
 
     # 总页数
     total_pages = (total_images + images_per_page - 1) // images_per_page
-
+    if current_page > total_pages:
+        return redirect(
+            url_for("into_gallery", gallery_name=gallery_name, page=total_pages)
+        )
     if total_images % images_per_page == 0:
         total_pages = max(total_pages - 1, 1)
     print(total_pages)
@@ -469,4 +474,4 @@ def page_not_found(e):
 if __name__ == "__main__":
     # Talisman(app, force_https=True)
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
-    app.run(host="0.0.0.0", port=12000, debug=True, threaded=True)
+    app.run(host="0.0.0.0", port=12000, debug=False, threaded=True)
