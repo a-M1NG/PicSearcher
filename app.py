@@ -23,11 +23,12 @@ from flask_login import (
 import mysql.connector
 import os
 import random
+
 from modules import *
 from werkzeug.serving import WSGIRequestHandler
 
 app = Flask(__name__)
-app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
 app.secret_key = "supersecret"
 bcrypt = Bcrypt(app)  # 用于加密密码
 login_manager = LoginManager(app)
@@ -39,7 +40,7 @@ ALL_GALLERIES = get_all_galleries()
 @app.after_request
 def add_cache_headers(response):
     if "static/" in request.path:
-        response.cache_control.max_age = 86400  # 缓存一天
+        response.cache_control.max_age = 3600
     return response
 
 
@@ -68,6 +69,7 @@ def index():
             "search.html",
             Username=current_user.username,
             exactmatch=session.get("EXACTMATCH", False),
+            nlpsearch=session.get("NLP_MATCH", False),
             darkmode=session.get("DarkMode", True),
         )
     return redirect(
@@ -76,7 +78,7 @@ def index():
 
 
 latest_results = []
-latest_search_tags = []
+latest_search_tags = ""
 
 
 # 搜索图片路由
@@ -91,12 +93,36 @@ def search():
     per_page = IMG_PER_PG  # 每页显示的图片数量，可根据需要调整
 
     if request.method == "POST":
-        tags = request.form.get("tags").split(",")  # 获取用户输入的标签
-        if not tags or tags == [""]:
+        # 获取复选框状态
+        nlp_match = "nlp_match" in request.form  # 更简单的检查方式
+        exact_match = "exact_match" in request.form
+
+        session.update({"NLP_MATCH": nlp_match, "EXACTMATCH": exact_match})
+
+        tags = request.form.get("tags", "").strip()
+        if not tags:
             return redirect(url_for("index"))
-        exact_match = request.form.get("exact_match")  # 是否精确匹配
-        session["EXACTMATCH"] = True if exact_match == "on" else False
-        latest_results = search_images_by_tags(tags, exact_match)
+
+        if nlp_match:
+            print(f"使用自然语言搜索 {tags}")
+            try:
+                import faiss
+
+                vector_index = faiss.read_index("image_vector_db.index")
+                from tools.nlp_search import search_by_text
+
+                idxs, scores = search_by_text(tags, vector_index, 20)
+                latest_results = [get_image_hash_by_id(i + 1) for i in idxs]
+                print(
+                    f"res: {[(int(idxs[i]),float(scores[i])) for i in range(len(idxs))]}"
+                )
+            except Exception as e:
+                flash("自然语言搜索失败，已切换回标签搜索")
+                session["NLP_MATCH"] = False
+                latest_results = search_images_by_tags(tags.split(","), exact_match)
+        else:
+            latest_results = search_images_by_tags(tags.split(","), exact_match)
+
         latest_search_tags = tags
 
     # 分页逻辑
@@ -120,8 +146,9 @@ def search():
             "results.html",
             images=None,  # 传递空的images列表
             Username=current_user.username,
-            init_tags=",".join(latest_search_tags),
+            init_tags=latest_search_tags,
             exactmatch=session.get("EXACTMATCH", False),
+            nlpsearch=session.get("NLP_MATCH", False),
             darkmode=session.get("DarkMode", True),
         )
 
@@ -132,7 +159,7 @@ def search():
         "results.html",
         images=images,  # 传递当前页的图片列表
         Username=current_user.username,
-        init_tags=",".join(latest_search_tags),
+        init_tags=latest_search_tags,
         exactmatch=session.get("EXACTMATCH", False),
         phoneua=session.get("PHONEUA", False),
         current_page=page,  # 当前页码
@@ -141,6 +168,7 @@ def search():
         end_page=end_page,  # 分页的结束页
         total_count=total_images,  # 总图片数量
         darkmode=session.get("DarkMode", True),
+        nlpsearch=session.get("NLP_MATCH", False),
     )
 
 
@@ -198,6 +226,8 @@ def gallery():
         current_page=page,
         start_page=start_page,
         end_page=end_page,
+        nlpsearch=session.get("NLP_MATCH", False),
+        exactmatch=session.get("EXACTMATCH", False),
         darkmode=session.get("DarkMode", True),
     )
 
@@ -439,4 +469,4 @@ def page_not_found(e):
 if __name__ == "__main__":
     # Talisman(app, force_https=True)
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
-    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
+    app.run(host="0.0.0.0", port=12000, debug=True, threaded=True)

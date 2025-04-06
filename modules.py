@@ -156,18 +156,25 @@ def get_cache_image_path(image_hash, max_width=500, max_height=500):
     os.makedirs(thumb_dir, exist_ok=True)
 
     # 保存为WebP（优化质量/大小）
-    img.save(thumb_path, "WEBP", quality=85)
+    img.save(thumb_path, "WEBP", quality=95)
 
     return thumb_path
 
 
 def get_image_path_by_id(image_id):
-    # 假设此函数从数据库中查询image_id对应的路径
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     query = "SELECT filepath FROM image WHERE id = %s"
     cursor.execute(query, (image_id,))
     return cursor.fetchone()[0]  # 返回图片路径
+
+
+def get_image_hash_by_id(image_id):
+    conn = mysql.connector.connect(**DB_CONFIG)
+    cursor = conn.cursor()
+    query = "SELECT hash FROM image WHERE id = %s"
+    cursor.execute(query, (str(image_id),))
+    return cursor.fetchone()[0]  # 返回图片hash
 
 
 def calculate_image_hash(image_id):
@@ -285,38 +292,42 @@ def search_images_by_tags(tags, exact_match):
         # 精确匹配标签
         placeholders = ", ".join(["%s"] * len(tags))  # 为每个标签生成占位符
         query = f"""
-        SELECT image.filepath, image.r18
+        SELECT image.id, image.filepath, image.r18
         FROM image
         JOIN image_tag ON image.id = image_tag.image_id
         JOIN tag ON image_tag.tag_id = tag.id
         WHERE tag.name IN ({placeholders})
         GROUP BY image.id
-        HAVING COUNT(DISTINCT tag.id) = %s;
+        HAVING COUNT(DISTINCT tag.id) = %s ORDER BY image.id;
         """
         cursor.execute(query, (*tags, len(tags)))
         print("exact match")
 
     else:
-        # 创建查询列表
-        queries = []
+        # 使用方案一修改后的代码
+        exists_clauses = []
+        like_patterns = []
         for tag in tags:
-            queries.append(
+            exists_clauses.append(
                 f"""
-            SELECT image.filepath, image.r18
-            FROM image
-            JOIN image_tag ON image.id = image_tag.image_id
-            JOIN tag ON image_tag.tag_id = tag.id
-            WHERE tag.name LIKE %s
+                EXISTS (
+                    SELECT 1
+                    FROM image_tag
+                    JOIN tag ON image_tag.tag_id = tag.id
+                    WHERE image.id = image_tag.image_id
+                    AND tag.name LIKE %s
+                )
             """
             )
+            like_patterns.append(f"%{tag}%")
 
-        # 将所有查询用 UNION 连接起来
-        query = " INTERSECT ".join(queries)
-
-        # 为每个标签添加 LIKE 匹配的通配符
-        like_patterns = [f"%{tag}%" for tag in tags]
-
-        # 执行查询
+        query = f"""
+            SELECT DISTINCT image.id, image.filepath, image.r18
+            FROM image
+            WHERE {' AND '.join(exists_clauses)}
+            ORDER BY image.id;
+        """
+        print(query)
         cursor.execute(query, like_patterns)
         print("fuzzy match")
 
@@ -325,11 +336,11 @@ def search_images_by_tags(tags, exact_match):
     print(f"\n查询执行时间:{time.time()-start_time}")
 
     conn.close()
-    print(len(results))
+    # print("找到结果 ", len(results))
     return [
-        calculate_image_hash(row[0])
+        calculate_image_hash(row[1])
         for row in results
-        if os.path.exists(row[0]) and (SHOW_R18 or row[1] == 0)
+        if os.path.exists(row[1]) and (SHOW_R18 or row[2] == 0)
     ]
 
 
