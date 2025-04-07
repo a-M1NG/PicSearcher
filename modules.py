@@ -18,6 +18,7 @@ config.read(config_path)
 # MySQL配置
 DB_CONFIG = dict(config["DB_CONFIG"])
 IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
+TOP_K = int(dict(config["IMAGE"])["top_k"])
 IMAGE_EXTENSIONS = [
     ".png",
     ".jpg",

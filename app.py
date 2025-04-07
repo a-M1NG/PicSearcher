@@ -26,7 +26,13 @@ import random
 
 from modules import *
 from werkzeug.serving import WSGIRequestHandler
+import faiss
 
+vector_index = faiss.read_index("image_vector_db.index")
+from tools.nlp_search import search_by_text
+
+print("faiss index loaded")
+print("ready to perform nlp search")
 app = Flask(__name__)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
 app.secret_key = "supersecret"
@@ -106,12 +112,7 @@ def search():
         if nlp_match:
             print(f"使用自然语言搜索 {tags}")
             try:
-                import faiss
-
-                vector_index = faiss.read_index("image_vector_db.index")
-                from tools.nlp_search import search_by_text
-
-                idxs, scores = search_by_text(tags, vector_index, 20)
+                idxs, scores = search_by_text(tags, vector_index, TOP_K)
                 latest_results = [get_image_hash_by_id(i + 1) for i in idxs]
                 print(
                     f"res: {[(int(idxs[i]),float(scores[i])) for i in range(len(idxs))]}"
@@ -128,6 +129,7 @@ def search():
     # 分页逻辑
     total_images = len(latest_results)
     total_pages = (total_images + per_page - 1) // per_page  # 计算总页数
+    page = min(page, total_pages)
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     images_paginated = latest_results[start_idx:end_idx]  # 获取当前页的图片
@@ -154,7 +156,7 @@ def search():
 
     start_page = max(page - 1, 1)
     end_page = min(page + 1, total_pages)
-    page = min(page, total_pages)  # 确保页码不超过总页数
+    # 确保页码不超过总页数
     return render_template(
         "results.html",
         images=images,  # 传递当前页的图片列表
