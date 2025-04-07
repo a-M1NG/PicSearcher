@@ -27,13 +27,17 @@ import random
 from modules import *
 from werkzeug.serving import WSGIRequestHandler
 import faiss
+import torch
 
-vector_index = faiss.read_index("image_vector_db.index")
-from tools.nlp_search import search_by_text
+app = Flask(__name__)
+with app.app_context():
+    vector_index = faiss.read_index("image_vector_db.index")
+    from tools.nlp_search import init_models
 
+    text_model, tokenizer = init_models()
+device = "cuda" if torch.cuda.is_available() else "cpu"
 print("faiss index loaded")
 print("ready to perform nlp search")
-app = Flask(__name__)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
 app.secret_key = "supersecret"
 bcrypt = Bcrypt(app)  # 用于加密密码
@@ -41,6 +45,21 @@ login_manager = LoginManager(app)
 login_manager.login_view = "login"
 HOSTS = ["192.168.137.1", "127.0.0.1", "118.202.40.143"]
 ALL_GALLERIES = get_all_galleries()
+
+
+def search_by_text(text, index, top_k=20):
+    # 使用 tokenizer 生成 tokenized 输入，并转移到相同的设备
+    with torch.no_grad():
+        res = text_model.forward(text, tokenizer).to(device)
+    # 将向量转换为 numpy 数组，并提取第一维的向量
+    vector = res.cpu().numpy()[0]
+    # 对向量进行 L2 归一化（归一化后的向量使用内积可以模拟余弦相似度）
+    faiss.normalize_L2(vector.reshape(1, -1))
+
+    # 在 FAISS 索引中搜索最相似的图片
+    D, I = index.search(vector.reshape(1, -1), top_k)
+
+    return I[0], D[0]
 
 
 @app.after_request

@@ -4,7 +4,6 @@ from PIL import Image
 import numpy as np
 import torch
 import faiss
-from transformers import CLIPProcessor, CLIPModel
 import mysql.connector
 from multilingual_clip import pt_multilingual_clip
 import transformers
@@ -15,9 +14,19 @@ text_model_path = "./hf-mirror/hub/models--openai--clip-vit-base-patch32/snapsho
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(text_model_name)
+def init_models():
+    text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
+        "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+    )
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+    )
+    return text_model, tokenizer
 
-tokenizer = transformers.AutoTokenizer.from_pretrained(text_model_name)
+
+# text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(text_model_name)
+
+# tokenizer = transformers.AutoTokenizer.from_pretrained(text_model_name)
 
 # text_model.to(device)
 
@@ -107,6 +116,12 @@ def process_and_save_index(uid_list, db_path, index_path):
 
 def search_by_text(text, index, top_k=20):
     # 使用 tokenizer 生成 tokenized 输入，并转移到相同的设备
+    text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
+        "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+    )
+    tokenizer = transformers.AutoTokenizer.from_pretrained(
+        "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+    )
     with torch.no_grad():
         res = text_model.forward(text, tokenizer).to(device)
     # 将向量转换为 numpy 数组，并提取第一维的向量

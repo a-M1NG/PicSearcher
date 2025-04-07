@@ -192,25 +192,32 @@ def get_gallery_images_count(gallery_name):
 
 
 def get_gallery_images(gallery_name, page, uid, per_page=30):
-    offset = (page - 1) * per_page  # 计算当前页的偏移量
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = """
-        SELECT i.hash, i.id 
-        FROM image i 
-        JOIN gallery_image gi ON i.id = gi.image_id 
-        JOIN gallery g ON gi.gallery_id = g.id 
-        WHERE g.name = %s 
-        LIMIT %s OFFSET %s
-    """
-    cursor.execute(query, (gallery_name, per_page, offset))
-    results = cursor.fetchall()
-    conn.close()
-    return [
-        MImage(row[0], get_image_tags(row[0]), row[1], is_user_like(row[1], uid))
-        for row in results
-        if os.path.exists(get_image_path_by_hash(row[0]))
-    ]
+    offset = (page - 1) * per_page
+    with mysql.connector.connect(**DB_CONFIG) as conn:
+        with conn.cursor() as cursor:
+            query = """
+                SELECT 
+                    i.hash, 
+                    i.id,
+                    (SELECT GROUP_CONCAT(t.name) FROM tag t 
+                     JOIN image_tag it ON t.id = it.tag_id 
+                     WHERE it.image_id = i.id) AS tags,
+                    EXISTS (SELECT 1 FROM user_liked ul 
+                            WHERE ul.image_id = i.id AND ul.uid = %s) AS liked
+                FROM image i 
+                JOIN gallery_image gi ON i.id = gi.image_id 
+                JOIN gallery g ON gi.gallery_id = g.id 
+                WHERE g.name = %s 
+                LIMIT %s OFFSET %s
+            """
+            cursor.execute(query, (uid, gallery_name, per_page, offset))
+            results = cursor.fetchall()
+
+    images = []
+    for row in results:
+        tags = row[2].split(",") if row[2] else []
+        images.append(MImage(filehash=row[0], tags=tags, id=row[1], like=row[3]))
+    return images
 
 
 def isGalleyExist(gallery_name):
