@@ -4,6 +4,7 @@ import time
 from flask import jsonify
 from flask_login import UserMixin
 import mysql.connector
+from mysql.connector import pooling
 from PIL import Image
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length
@@ -17,6 +18,10 @@ config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.i
 config.read(config_path)
 # MySQL配置
 DB_CONFIG = dict(config["DB_CONFIG"])
+DB_CONFIG["pool_size"] = int(DB_CONFIG["pool_size"])  # 32
+DB_CONFIG["pool_reset_session"] = (
+    DB_CONFIG["pool_reset_session"].lower() == "true"
+)  # false
 IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
 TOP_K = int(dict(config["IMAGE"])["top_k"])
 IMAGE_EXTENSIONS = [
@@ -31,6 +36,7 @@ IMAGE_EXTENSIONS = [
     ".WEBP",
     ".BMP",
 ]
+connection_pool = pooling.MySQLConnectionPool(**DB_CONFIG, connection_timeout=2)
 
 
 # 用户表单
@@ -161,19 +167,23 @@ def get_cache_image_path(image_hash, max_width=500, max_height=500):
 
 
 def get_image_path_by_id(image_id):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT filepath FROM image WHERE id = %s"
-    cursor.execute(query, (image_id,))
-    return cursor.fetchone()[0]  # 返回图片路径
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT filepath FROM image WHERE id = %s"
+            cursor.execute(query, (str(image_id),))
+            result = cursor.fetchone()
+            if result:
+                return result[0]
+    return None
 
 
 def get_image_hash_by_id(image_id):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT hash FROM image WHERE id = %s"
-    cursor.execute(query, (str(image_id),))
-    return cursor.fetchone()[0]  # 返回图片hash
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT hash FROM image WHERE id = %s"
+            cursor.execute(query, (str(image_id),))
+            result = cursor.fetchone()
+    return result[0] if result else None
 
 
 def calculate_image_hash(image_id):
@@ -182,30 +192,28 @@ def calculate_image_hash(image_id):
 
 
 def get_gallery_images_count(gallery_name):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT COUNT(*) FROM gallery_image gi JOIN gallery g on gi.gallery_id = g.id WHERE g.name = %s"
-    cursor.execute(query, (gallery_name,))
-    result = cursor.fetchone()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT COUNT(*) FROM gallery_image gi JOIN gallery g on gi.gallery_id = g.id WHERE g.name = %s"
+            cursor.execute(query, (gallery_name,))
+            result = cursor.fetchone()
     return result[0]
 
 
 def get_gallery_images(gallery_name, page, uid, per_page=30):
-    offset = (page - 1) * per_page  # 计算当前页的偏移量
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = """
-        SELECT i.hash, i.id 
-        FROM image i 
-        JOIN gallery_image gi ON i.id = gi.image_id 
-        JOIN gallery g ON gi.gallery_id = g.id 
-        WHERE g.name = %s 
-        LIMIT %s OFFSET %s
-    """
-    cursor.execute(query, (gallery_name, per_page, offset))
-    results = cursor.fetchall()
-    conn.close()
+    offset = (page - 1) * per_page
+    with connection_pool.get_connection() as conn:  # 自动管理连接
+        with conn.cursor() as cursor:
+            query = """
+                SELECT i.hash, i.id 
+                FROM image i 
+                JOIN gallery_image gi ON i.id = gi.image_id 
+                JOIN gallery g ON gi.gallery_id = g.id 
+                WHERE g.name = %s 
+                LIMIT %s OFFSET %s
+            """
+            cursor.execute(query, (gallery_name, per_page, offset))
+            results = cursor.fetchall()
     return [
         MImage(row[0], get_image_tags(row[0]), row[1], is_user_like(row[1], uid))
         for row in results
@@ -214,24 +222,22 @@ def get_gallery_images(gallery_name, page, uid, per_page=30):
 
 
 def isGalleyExist(gallery_name):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT i.hash FROM image i JOIN gallery_image gi on i.id = gi.image_id JOIN gallery g on gi.gallery_id = g.id WHERE g.name = %s LIMIT 1"
-    cursor.execute(query, (gallery_name,))
-    result = cursor.fetchone()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT i.hash FROM image i JOIN gallery_image gi on i.id = gi.image_id JOIN gallery g on gi.gallery_id = g.id WHERE g.name = %s LIMIT 1"
+            cursor.execute(query, (gallery_name,))
+            result = cursor.fetchone()
     if not result:
         return False
     return os.path.exists(get_image_path_by_hash(result[0]))
 
 
 def get_all_galleries() -> list[str]:
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT name FROM gallery"
-    cursor.execute(query)
-    results = cursor.fetchall()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT name FROM gallery"
+            cursor.execute(query)
+            results = cursor.fetchall()
     gals = [row[0] for row in results if isGalleyExist(row[0])]
     gals.sort()
     print(f"galleries: {gals}")
@@ -239,39 +245,36 @@ def get_all_galleries() -> list[str]:
 
 
 def get_galleries_count():
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT COUNT(*) FROM gallery"
-    cursor.execute(query)
-    result = cursor.fetchone()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT COUNT(*) FROM gallery"
+            cursor.execute(query)
+            result = cursor.fetchone()
     return result[0]
 
 
 def get_image_path_by_hash(image_hash):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT filepath FROM image WHERE hash = %s"
-    cursor.execute(query, (image_hash,))
-    result = cursor.fetchone()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT filepath FROM image WHERE hash = %s"
+            cursor.execute(query, (image_hash,))
+            result = cursor.fetchone()
     return result[0] if result else None
 
 
 def get_image_tags(image_hash):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = """
-    SELECT tag.name
-    FROM tag
-    JOIN image_tag ON tag.id = image_tag.tag_id
-    JOIN image ON image_tag.image_id = image.id
-    WHERE image.hash = %s
-    """
-    cursor.execute(query, (image_hash,))
-    tags = [row[0] for row in cursor.fetchall()]
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = """
+            SELECT tag.name
+            FROM tag
+            JOIN image_tag ON tag.id = image_tag.tag_id
+            JOIN image ON image_tag.image_id = image.id
+            WHERE image.hash = %s
+            """
+            cursor.execute(query, (image_hash,))
+            tags = [row[0] for row in cursor.fetchall()]
     tags.sort()
-    conn.close()
     return tags
 
 
@@ -279,75 +282,76 @@ def get_image_tags(image_hash):
 def search_images_by_tags(tags, exact_match):
     global EXACTMATCH
     EXACTMATCH = exact_match
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    start_time = time.time()
-    print(f"searching for tags: {tags}")
-    if exact_match:
-        # 精确匹配标签
-        placeholders = ", ".join(["%s"] * len(tags))  # 为每个标签生成占位符
-        query = f"""
-        SELECT image.id, image.filepath
-        FROM image
-        JOIN image_tag ON image.id = image_tag.image_id
-        JOIN tag ON image_tag.tag_id = tag.id
-        WHERE tag.name IN ({placeholders})
-        GROUP BY image.id
-        HAVING COUNT(DISTINCT tag.id) = %s ORDER BY image.id;
-        """
-        cursor.execute(query, (*tags, len(tags)))
-        print("exact match")
+    # conn = connection_pool.get_connection()
+    # cursor = conn.cursor()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            start_time = time.time()
+            print(f"searching for tags: {tags}")
+            if exact_match:
+                # 精确匹配标签
+                placeholders = ", ".join(["%s"] * len(tags))  # 为每个标签生成占位符
+                query = f"""
+                SELECT image.id, image.filepath
+                FROM image
+                JOIN image_tag ON image.id = image_tag.image_id
+                JOIN tag ON image_tag.tag_id = tag.id
+                WHERE tag.name IN ({placeholders})
+                GROUP BY image.id
+                HAVING COUNT(DISTINCT tag.id) = %s ORDER BY image.id;
+                """
+                cursor.execute(query, (*tags, len(tags)))
+                print("exact match")
 
-    else:
-        # 使用方案一修改后的代码
-        exists_clauses = []
-        like_patterns = []
-        for tag in tags:
-            exists_clauses.append(
-                f"""
-                EXISTS (
-                    SELECT 1
-                    FROM image_tag
-                    JOIN tag ON image_tag.tag_id = tag.id
-                    WHERE image.id = image_tag.image_id
-                    AND tag.name LIKE %s
-                )
-            """
-            )
-            like_patterns.append(f"%{tag}%")
+            else:
+                # 使用方案一修改后的代码
+                exists_clauses = []
+                like_patterns = []
+                for tag in tags:
+                    exists_clauses.append(
+                        f"""
+                        EXISTS (
+                            SELECT 1
+                            FROM image_tag
+                            JOIN tag ON image_tag.tag_id = tag.id
+                            WHERE image.id = image_tag.image_id
+                            AND tag.name LIKE %s
+                        )
+                    """
+                    )
+                    like_patterns.append(f"%{tag}%")
 
-        query = f"""
-            SELECT DISTINCT image.id, image.filepath
-            FROM image
-            WHERE {' AND '.join(exists_clauses)}
-            ORDER BY image.id;
-        """
-        # print(query)
-        cursor.execute(query, like_patterns)
-        print("fuzzy match")
+                query = f"""
+                    SELECT DISTINCT image.id, image.filepath
+                    FROM image
+                    WHERE {' AND '.join(exists_clauses)}
+                    ORDER BY image.id;
+                """
+                # print(query)
+                cursor.execute(query, like_patterns)
+                print("fuzzy match")
 
-    # 获取查询结果
-    results = cursor.fetchall()
-    print(f"\n查询执行时间:{time.time()-start_time}")
-
-    conn.close()
+            # 获取查询结果
+            results = cursor.fetchall()
+            print(f"\n查询执行时间:{time.time()-start_time}")
+    # cursor.close()
+    # conn.close()
     # print("找到结果 ", len(results))
     return [calculate_image_hash(row[1]) for row in results if os.path.exists(row[1])]
 
 
 def get_image_id_by_hash(image_hash):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT id FROM image WHERE hash = %s"
-    cursor.execute(query, (image_hash,))
-    result = cursor.fetchone()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT id FROM image WHERE hash = %s"
+            cursor.execute(query, (image_hash,))
+            result = cursor.fetchone()
     return result[0] if result else None
 
 
 def remove_tag_from_image(image_id, tag):
     # Connect to database
-    with mysql.connector.connect(**DB_CONFIG) as conn:
+    with connection_pool.get_connection() as conn:
         with conn.cursor() as cursor:
             try:
                 # Check if the tag exists
@@ -388,125 +392,116 @@ def remove_tag_from_image(image_id, tag):
 
 def add_tag_to_image(image_id, tag):
     # Connect to database
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
 
-    try:
-        # Check if the tag exists
-        print("checking tag")
-        cursor.execute("SELECT id FROM tag WHERE name = %s", (tag,))
-        tag_result = cursor.fetchone()
+            try:
+                # Check if the tag exists
+                print("checking tag")
+                cursor.execute("SELECT id FROM tag WHERE name = %s", (tag,))
+                tag_result = cursor.fetchone()
 
-        if not tag_result:
-            # Tag doesn't exist, insert new tag
-            print("tag doesn't exist")
-            cursor.execute("INSERT INTO tag (name) VALUES (%s)", (tag,))
-            conn.commit()
-            tag_id = cursor.lastrowid  # Get the new tag ID
-        else:
-            print("tag exists")
-            tag_id = tag_result[0]  # Use existing tag ID
+                if not tag_result:
+                    # Tag doesn't exist, insert new tag
+                    print("tag doesn't exist")
+                    cursor.execute("INSERT INTO tag (name) VALUES (%s)", (tag,))
+                    conn.commit()
+                    tag_id = cursor.lastrowid  # Get the new tag ID
+                else:
+                    print("tag exists")
+                    tag_id = tag_result[0]  # Use existing tag ID
 
-        # Insert or update the image_tag relationship
-        cursor.execute(
-            "SELECT 1 FROM image_tag WHERE tag_id = %s AND image_id = %s",
-            (tag_id, image_id),
-        )
-        image_tag_result = cursor.fetchone()
+                # Insert or update the image_tag relationship
+                cursor.execute(
+                    "SELECT 1 FROM image_tag WHERE tag_id = %s AND image_id = %s",
+                    (tag_id, image_id),
+                )
+                image_tag_result = cursor.fetchone()
 
-        if not image_tag_result:
-            cursor.execute(
-                "INSERT INTO image_tag (tag_id, image_id) VALUES (%s, %s)",
-                (tag_id, image_id),
-            )
-            conn.commit()
-        else:
-            return jsonify({"success": False, "duplicate": True})
+                if not image_tag_result:
+                    cursor.execute(
+                        "INSERT INTO image_tag (tag_id, image_id) VALUES (%s, %s)",
+                        (tag_id, image_id),
+                    )
+                    conn.commit()
+                else:
+                    return jsonify({"success": False, "duplicate": True})
 
-        return jsonify({"success": True})
+                return jsonify({"success": True})
 
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"success": False, "message": str(e)})
-
-    finally:
-        cursor.close()
-        conn.close()
+            except Exception as e:
+                print(f"Error: {e}")
+                return jsonify({"success": False, "message": str(e)})
 
 
 def is_user_like(image_id, uid):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT 1 FROM user_liked WHERE image_id = %s AND uid = %s"
-    cursor.execute(query, (image_id, uid))
-    result = cursor.fetchone()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT 1 FROM user_liked WHERE image_id = %s AND uid = %s"
+            cursor.execute(query, (image_id, uid))
+            result = cursor.fetchone()
     return result is not None
 
 
 def toggle_like_image(image_id, uid):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT 1 FROM user_liked WHERE image_id = %s AND uid = %s"
-    cursor.execute(query, (image_id, uid))
-    result = cursor.fetchone()
-    if result:
-        cursor.execute(
-            "DELETE FROM user_liked WHERE image_id = %s AND uid = %s", (image_id, uid)
-        )
-    else:
-        cursor.execute(
-            "INSERT INTO user_liked (image_id, uid) VALUES (%s, %s)", (image_id, uid)
-        )
-    conn.commit()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT 1 FROM user_liked WHERE image_id = %s AND uid = %s"
+            cursor.execute(query, (image_id, uid))
+            result = cursor.fetchone()
+            if result:
+                cursor.execute(
+                    "DELETE FROM user_liked WHERE image_id = %s AND uid = %s",
+                    (image_id, uid),
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO user_liked (image_id, uid) VALUES (%s, %s)",
+                    (image_id, uid),
+                )
+            conn.commit()
     print("like toggled")
     return jsonify({"success": True})
 
 
 def fetch_users():
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    cursor.execute("SELECT uid, username, password_hash FROM user")
-    results = cursor.fetchall()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT uid, username, password_hash FROM user")
+            results = cursor.fetchall()
     return [User(*row) for row in results]
 
 
 def fetch_user_liked(uid):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = """
-        SELECT i.hash, i.id
-        FROM user_liked ul
-        JOIN image i ON ul.image_id = i.id
-        WHERE ul.uid = %s
-        ORDER BY i.id
-    """
-    cursor.execute(query, (uid,))
-    results = cursor.fetchall()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = """
+                SELECT i.hash, i.id
+                FROM user_liked ul
+                JOIN image i ON ul.image_id = i.id
+                WHERE ul.uid = %s
+                ORDER BY i.id
+            """
+            cursor.execute(query, (uid,))
+            results = cursor.fetchall()
     return [MImage(row[0], get_image_tags(row[0]), row[1], True) for row in results]
 
 
 def fetch_user(username):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    query = "SELECT uid, username, password_hash FROM user WHERE username = %s"
-    cursor.execute(query, (username,))
-    result = cursor.fetchone()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            query = "SELECT uid, username, password_hash FROM user WHERE username = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
     return {"id": result[0], "username": result[1]}
 
 
 def remove_user_from_db(user_id):
-    conn = mysql.connector.connect(**DB_CONFIG)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM user WHERE uid = %s", (user_id,))
-    if not cursor.fetchone():
-        conn.close()
-        return False
-    cursor.execute("DELETE FROM user WHERE uid = %s", (user_id,))
-    conn.commit()
-    conn.close()
+    with connection_pool.get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM user WHERE uid = %s", (user_id,))
+            if not cursor.fetchone():
+                return False
+            cursor.execute("DELETE FROM user WHERE uid = %s", (user_id,))
+            conn.commit()
     return True

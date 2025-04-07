@@ -52,7 +52,7 @@ def add_cache_headers(response):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = connection_pool.get_connection()
     # session.permanent = True
     cursor = conn.cursor()
     cursor.execute(
@@ -61,6 +61,7 @@ def load_user(user_id):
     user = cursor.fetchone()
     if user:
         return User(id=user[0], username=user[1], password_hash=user[2])
+    cursor.close()
     conn.close()
     return None
 
@@ -295,11 +296,12 @@ def get_galleries(page, per_page) -> list[str]:
 @app.route("/gallery_cover/<gallery_name>/")
 @login_required
 def get_gallery_cover(gallery_name):
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = connection_pool.get_connection()
     cursor = conn.cursor()
     query = "SELECT i.hash FROM image i JOIN gallery_image gi on i.id = gi.image_id JOIN gallery g on gi.gallery_id = g.id WHERE g.name = %s LIMIT 1"
     cursor.execute(query, (gallery_name,))
     result = cursor.fetchone()
+    cursor.close()
     conn.close()
     filehash = result[0]
     # filepath = get_image_path_by_hash(filehash)
@@ -325,20 +327,23 @@ def login():
     focuspassword = False
     if request.args.get("loginreq") == "True":
         flash("请先登录", "danger")
+        print("请先登录")
     if form.validate_on_submit():
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = connection_pool.get_connection()
         cursor = conn.cursor()
         cursor.execute(
             "SELECT uid, username, password_hash FROM user WHERE username = %s",
             (form.username.data,),
         )
         user = cursor.fetchone()
-
+        cursor.close()
+        conn.close()
         if user and bcrypt.check_password_hash(user[2], form.password.data):
             user_obj = User(id=user[0], username=user[1], password_hash=user[2])
             uname = user[1]
             login_user(user_obj)
             # flash("Login successful!", "success")
+            print(f"用户 {uname} 登录成功")
             return redirect(url_for("index"))
 
         flash("用户名或密码错误", "danger")
@@ -451,7 +456,7 @@ def view_all_liked_images():
 
 
 def add_user_to_db(username, password):
-    conn = mysql.connector.connect(**DB_CONFIG)
+    conn = connection_pool.get_connection()
     cursor = conn.cursor()
     # 检查用户名是否已存在
     cursor.execute("SELECT * FROM user WHERE username = %s", (username,))
@@ -463,6 +468,7 @@ def add_user_to_db(username, password):
         (username, bcrypt.generate_password_hash(password).decode("utf-8")),
     )
     conn.commit()
+    cursor.close()
     conn.close()
     return True
 
@@ -476,4 +482,4 @@ def page_not_found(e):
 if __name__ == "__main__":
     # Talisman(app, force_https=True)
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
-    app.run(host="0.0.0.0", port=12000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=12000, debug=False, threaded=False)
