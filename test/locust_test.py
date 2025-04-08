@@ -1,3 +1,4 @@
+import random
 from locust import HttpUser, task, between
 from bs4 import BeautifulSoup
 import re
@@ -56,12 +57,20 @@ class WebsiteUser(HttpUser):
                 return
 
         keyword = "nature"  # 测试关键词
-        response = self.client.post(
-            "/search/",
-            {
-                "tags": keyword,
-                "exact_match": "on",
-                "csrf_token": self.csrf_token,  # 搜索页面可能也需要CSRF
+        # response = self.client.post(
+        #     "/search/",
+        #     {
+        #         "tags": keyword,
+        #         "exact_match": "on",
+        #         "csrf_token": self.csrf_token,  # 搜索页面可能也需要CSRF
+        #     },
+        #     cookies=self.cookies,
+        # )
+        response = self.client.get(
+            "/gallery-music/",
+            params={
+                "page": random.randint(1, 10),
+                # "csrf_token": self.csrf_token,  # 搜索页面可能也需要CSRF
             },
             cookies=self.cookies,
         )

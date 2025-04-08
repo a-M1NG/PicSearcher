@@ -35,9 +35,10 @@ with app.app_context():
     from tools.nlp_search import init_models
 
     text_model, tokenizer = init_models()
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print("faiss index loaded")
-print("ready to perform nlp search")
+    print("faiss index loaded")
+    print("ready to perform nlp search")
+
+
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
 app.secret_key = "supersecret"
 bcrypt = Bcrypt(app)  # 用于加密密码
@@ -50,7 +51,7 @@ ALL_GALLERIES = get_all_galleries()
 def search_by_text(text, index, top_k=20):
     # 使用 tokenizer 生成 tokenized 输入，并转移到相同的设备
     with torch.no_grad():
-        res = text_model.forward(text, tokenizer).to(device)
+        res = text_model.forward(text, tokenizer)
     # 将向量转换为 numpy 数组，并提取第一维的向量
     vector = res.cpu().numpy()[0]
     # 对向量进行 L2 归一化（归一化后的向量使用内积可以模拟余弦相似度）
@@ -148,7 +149,7 @@ def search():
     # 分页逻辑
     total_images = len(latest_results)
     total_pages = (total_images + per_page - 1) // per_page  # 计算总页数
-    page = min(page, total_pages)
+    # page = min(page, total_pages)
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     images_paginated = latest_results[start_idx:end_idx]  # 获取当前页的图片
