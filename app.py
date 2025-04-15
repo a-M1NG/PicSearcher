@@ -1,4 +1,3 @@
-from concurrent.futures import thread
 from flask import (
     Flask,
     jsonify,
@@ -20,23 +19,27 @@ from flask_login import (
     logout_user,
     current_user,
 )
-import mysql.connector
 import os
-import random
 
 from modules import *
 from werkzeug.serving import WSGIRequestHandler
 import faiss
 import torch
 
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 app = Flask(__name__)
-with app.app_context():
-    vector_index = faiss.read_index("image_vector_db.index")
-    from tools.nlp_search import init_models
+vector_index = faiss.read_index("image_vector_db.index")
+from multilingual_clip import pt_multilingual_clip
+import transformers
 
-    text_model, tokenizer = init_models()
-    print("faiss index loaded")
-    print("ready to perform nlp search")
+text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
+    "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+)
+tokenizer = transformers.AutoTokenizer.from_pretrained(
+    "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+)
+print("faiss index loaded")
+print("ready to perform nlp search")
 
 
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 3600
@@ -300,6 +303,8 @@ def into_gallery(gallery_name):
         end_page=end_page,
         phoneua=is_phone(request),
         total_count=total_images,
+        nlpsearch=session.get("NLP_MATCH", False),
+        exactmatch=session.get("EXACTMATCH", False),
         darkmode=session.get("DarkMode", True),
     )
 
