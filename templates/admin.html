@@ -108,7 +108,6 @@
 </head>
 
 <body class="bg-gradient-custom font-sans_light dark:font-sans_light smooth--trans2 flex flex-col min-h-screen">
-    <script src="../static/js/global.js"></script>
     {% include './modules/navBar.html' %}
     <div id="message" class="mb-4"></div>
 
@@ -207,6 +206,7 @@
         <img class="modal-content" id="modalImage">
         <div id="tagsContainer" class="tags"></div>
     </div>
+    <script src="../static/js/global.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const addUserBtn = document.getElementById('addUserBtn');

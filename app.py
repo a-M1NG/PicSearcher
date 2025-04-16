@@ -399,6 +399,8 @@ def admin():
         Username=current_user.username,
         users=fetch_users(),
         darkmode=session.get("DarkMode", True),
+        nlpsearch=session.get("NLP_MATCH", False),
+        exactmatch=session.get("EXACTMATCH", False),
         images=fetch_user_liked(current_user.id),
     )
 
