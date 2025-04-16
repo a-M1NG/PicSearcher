@@ -38,7 +38,6 @@ document.getElementById('searchForm').addEventListener('submit', function (event
     const exactMatch = document.getElementById('exact_match').checked;
     const nlpMatch = document.getElementById('nlp_match').checked;
     const submitButton = this.querySelector('button[type="submit"]');
-    const originalButtonHTML = submitButton.innerHTML;
     if (nlpMatch) {
         const submitButton = this.querySelector('button[type="submit"]');
         submitButton.innerHTML = `
@@ -48,6 +47,14 @@ document.getElementById('searchForm').addEventListener('submit', function (event
             </svg>
         `;
         submitButton.disabled = true;
+        const loadingText = document.createElement('div');
+        loadingText.id = 'nlp-loading';
+        loadingText.className = 'w-full text-center mt-2 text-sm text-gray-700 dark:text-gray-200';
+        loadingText.textContent = '正在处理自然语言搜索，这可能需要一些时间...';
+
+        // 插入到搜索容器底部（搜索框外部）
+        const searchContainer = document.getElementById('searchContainer');
+        searchContainer.appendChild(loadingText);
     }
     // 构建查询参数
     const params = new URLSearchParams();
