@@ -19,6 +19,7 @@ config.read(config_path)
 DB_CONFIG = dict(config["DB_CONFIG"])
 IMG_PER_PG = int(dict(config["IMAGE"])["per_page"])
 TOP_K = int(dict(config["IMAGE"])["top_k"])
+TOP_P = float(dict(config["IMAGE"])["top_p"])
 IMAGE_EXTENSIONS = [
     ".png",
     ".jpg",

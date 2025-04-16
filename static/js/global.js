@@ -28,37 +28,24 @@ function addTag(seltags) {
 }
 
 document.getElementById('searchForm').addEventListener('submit', function (event) {
-    // 阻止默认提交
-    event.preventDefault();
+    event.preventDefault(); // 阻止默认提交
 
-    // 创建隐藏字段容器
-    const hiddenFields = document.createElement('div');
+    // 获取搜索词
+    const searchTerm = document.getElementById('tags').value.trim();
+    if (!searchTerm) return; // 如果搜索词为空，不跳转
 
-    // 添加精确匹配状态
+    // 获取复选框状态
     const exactMatch = document.getElementById('exact_match').checked;
-    if (exactMatch) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'exact_match';
-        input.value = 'on';
-        hiddenFields.appendChild(input);
-    }
-
-    // 添加自然语言搜索状态
     const nlpMatch = document.getElementById('nlp_match').checked;
-    if (nlpMatch) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'nlp_match';  // 注意这里改为与Flask代码一致的名称
-        input.value = 'on';
-        hiddenFields.appendChild(input);
-    }
 
-    // 将隐藏字段添加到表单
-    this.appendChild(hiddenFields);
+    // 构建查询参数
+    const params = new URLSearchParams();
+    params.append('tags', searchTerm);
+    if (exactMatch) params.append('exact_match', 'on');
+    if (nlpMatch) params.append('nlp_match', 'on');
 
-    // 手动提交表单
-    this.submit();
+    // 跳转到目标 URL（如 /search?tags=xxx&exact_match=on&nlp_match=on）
+    window.location.href = `/search/?${params.toString()}`;
 });
 // Show the input area when the + button is clicked
 function showTagInput(imageId) {

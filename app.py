@@ -51,7 +51,7 @@ HOSTS = ["192.168.137.1", "127.0.0.1", "118.202.40.143"]
 ALL_GALLERIES = get_all_galleries()
 
 
-def search_by_text(text, index, top_k=20):
+def search_by_text(text, index, top_k=20, top_p=0.18):
     # 使用 tokenizer 生成 tokenized 输入，并转移到相同的设备
     with torch.no_grad():
         res = text_model.forward(text, tokenizer)
@@ -62,8 +62,12 @@ def search_by_text(text, index, top_k=20):
 
     # 在 FAISS 索引中搜索最相似的图片
     D, I = index.search(vector.reshape(1, -1), top_k)
+    mask = D[0] >= top_p
+    filtered_I = I[0][mask]
+    filtered_D = D[0][mask]
 
-    return I[0], D[0]
+    return filtered_I, filtered_D
+    # return I[0], D[0]
 
 
 @app.after_request
@@ -120,28 +124,33 @@ def search():
     # 获取当前页码，默认为第1页
     page = request.args.get("page", 1, type=int)
     per_page = IMG_PER_PG  # 每页显示的图片数量，可根据需要调整
+    tags = request.args.get("tags", "").strip()
+    prev_exact = session.get("EXACTMATCH", False)
+    prev_nlp = session.get("NLP_MATCH", False)
+    exact_match = "exact_match" in request.args
+    nlp_match = "nlp_match" in request.args
+    print(exact_match, nlp_match)
+    # nlp_match = "nlp_match" in request.form  # 更简单的检查方式
+    # exact_match = "exact_match" in request.form
+    session.update({"NLP_MATCH": nlp_match, "EXACTMATCH": exact_match})
 
-    if request.method == "POST":
-        # 获取复选框状态
-        nlp_match = "nlp_match" in request.form  # 更简单的检查方式
-        exact_match = "exact_match" in request.form
+    # tags = request.form.get("tags", "").strip()
 
-        session.update({"NLP_MATCH": nlp_match, "EXACTMATCH": exact_match})
-
-        tags = request.form.get("tags", "").strip()
-        if not tags:
-            return redirect(url_for("index"))
-
+    if not tags:
+        return redirect(url_for("index"))
+    if not tags == latest_search_tags or (
+        prev_exact != exact_match or prev_nlp != nlp_match
+    ):
         if nlp_match:
             print(f"使用自然语言搜索 {tags}")
             try:
-                idxs, scores = search_by_text(tags, vector_index, TOP_K)
+                idxs, scores = search_by_text(tags, vector_index, TOP_K, TOP_P)
                 latest_results = [get_image_hash_by_id(i + 1) for i in idxs]
                 print(
                     f"res: {[(int(idxs[i]),float(scores[i])) for i in range(len(idxs))]}"
                 )
             except Exception as e:
-                flash("自然语言搜索失败，已切换回标签搜索")
+                print("自然语言搜索失败，已切换回标签搜索", e)
                 session["NLP_MATCH"] = False
                 latest_results = search_images_by_tags(tags.split(","), exact_match)
         else:
@@ -503,4 +512,4 @@ def page_not_found(e):
 if __name__ == "__main__":
     # Talisman(app, force_https=True)
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
-    app.run(host="0.0.0.0", port=12000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=12000, debug=True, threaded=True)
