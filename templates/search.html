@@ -168,23 +168,38 @@
                 });
         }
         document.getElementById('searchForm').addEventListener('submit', function (event) {
-            event.preventDefault(); // 阻止默认提交
+            event.preventDefault();
 
-            // 获取搜索词
             const searchTerm = document.getElementById('tags').value.trim();
-            if (!searchTerm) return; // 如果搜索词为空，不跳转
+            if (!searchTerm) return;
 
-            // 获取复选框状态
             const exactMatch = document.getElementById('exact_match').checked;
             const nlpMatch = document.getElementById('nlp_match').checked;
 
-            // 构建查询参数
+            // 如果是自然语言搜索，显示加载提示
+            if (nlpMatch) {
+                const submitButton = this.querySelector('button[type="submit"]');
+                submitButton.innerHTML = `
+            <svg class="animate-spin w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        `;
+                submitButton.disabled = true;
+
+                // 也可以添加一个全局加载提示
+                const loadingText = document.createElement('div');
+                loadingText.id = 'nlp-loading';
+                loadingText.className = 'mt-2 text-gray-500 dark:text-gray-400';
+                loadingText.textContent = '正在处理自然语言搜索，这可能需要一些时间...';
+                this.parentNode.appendChild(loadingText);
+            }
+
             const params = new URLSearchParams();
             params.append('tags', searchTerm);
             if (exactMatch) params.append('exact_match', 'on');
             if (nlpMatch) params.append('nlp_match', 'on');
 
-            // 跳转到目标 URL（如 /search?tags=xxx&exact_match=on&nlp_match=on）
             window.location.href = `/search/?${params.toString()}`;
         });
     </script>
