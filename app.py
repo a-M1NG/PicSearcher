@@ -129,7 +129,7 @@ def search():
     prev_nlp = session.get("NLP_MATCH", False)
     exact_match = "exact_match" in request.args
     nlp_match = "nlp_match" in request.args
-    print(exact_match, nlp_match)
+    # print(exact_match, nlp_match)
     # nlp_match = "nlp_match" in request.form  # 更简单的检查方式
     # exact_match = "exact_match" in request.form
     session.update({"NLP_MATCH": nlp_match, "EXACTMATCH": exact_match})
