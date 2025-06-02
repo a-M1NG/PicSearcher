@@ -6,12 +6,13 @@ Refer to the [Installation](#installation) section for instructions on how to se
 ## Features
 
 - Search for images using keywords
+- Search for images using **natural language**
 - Responsive design with TailwindCSS
 - Simple and intuitive user interface
 - Like and save images to a collection
 - View saved images in the gallery
 
-## Pages
+## Pages (Outdated)
 Login:
 <img src='assets/login.png'>
 Main page:
