@@ -70,6 +70,14 @@ def search_by_text(text, index, top_k=20, top_p=0.18):
     # return I[0], D[0]
 
 
+def faiss_insert(img, id, index):
+    pass
+
+
+def faiss_batch_insert(imgs, ids, index):
+    pass
+
+
 @app.after_request
 def add_cache_headers(response):
     if "static/" in request.path:
