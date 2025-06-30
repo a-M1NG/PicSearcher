@@ -20,11 +20,14 @@ from flask_login import (
     current_user,
 )
 import os
-
+from tqdm import trange
 from modules import *
 from werkzeug.serving import WSGIRequestHandler
 import faiss
 import torch
+import open_clip
+import numpy as np
+from PIL import Image
 
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 app = Flask(__name__)
@@ -73,10 +76,128 @@ def search_by_text(text, index, top_k=20, top_p=0.18):
 def faiss_insert(img, id, index):
     pass
 
+def deal_transparent(image):
+    if image.mode == "P" and "transparency" in image.info:
+                # 转换为RGBA并创建白色背景
+                image = image.convert("RGBA")
+                background = Image.new("RGBA", image.size, (255, 255, 255))
+                image = Image.alpha_composite(background, image).convert("RGB")
+    return image
 
-def faiss_batch_insert(imgs, ids, index):
-    pass
 
+# 用于测试插入
+def test_img_insert(img:Image):
+    vector_index = faiss.read_index("image_vector_db.index")
+    insert_imgs([img], ["test_image"], vector_index)
+
+
+
+
+
+def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
+    """
+    Inserts a batch of images into the FAISS index AND the MySQL DB atomically.
+    如果任一步出错，数据库回滚，FAISS 索引恢复到调用前状态。
+    
+    插入图片到 FAISS 索引和 MySQL 数据库，
+    1.imgs 是 PIL Image 对象列表，
+    2.pic_names 是图片名称列表。
+    3.index 是 向量数据库对象
+    """
+    # 1. 准备 CLIP 模型和预处理
+    image_model, _, preprocess = open_clip.create_model_and_transforms(
+        "ViT-B-16-plus-240", pretrained="laion400m_e32"
+    )
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    image_model = image_model.to(device)
+
+    # 校验入参
+    if len(imgs) != len(pic_names):
+        raise ValueError("Length of imgs and pic_names must be the same.")
+    if not imgs:
+        print("No images to insert.")
+        return
+
+    # 2. 备份旧向量
+    old_ntotal = index.ntotal
+    if old_ntotal > 0:
+        old_vectors = index.reconstruct_n(0, old_ntotal)
+    else:
+        old_vectors = np.zeros((0, index.d), dtype='float32')
+
+    # 3. 先把所有图片持久化 & DB 条目插入到事务中
+    conn = mysql.connector.connect(**DB_CONFIG)
+    conn.autocommit = False
+    cursor = conn.cursor()
+    try:
+        # 确保 upload 相册存在
+        cursor.execute("SELECT id FROM gallery WHERE name=%s", ("upload",))
+        row = cursor.fetchone()
+        if row:
+            gallery_id = row[0]
+        else:
+            cursor.execute("INSERT INTO gallery(name) VALUES(%s)", ("upload",))
+            gallery_id = cursor.lastrowid
+
+        img_waiting = []
+        for img, name in zip(imgs, pic_names):
+            pic = name.strip()
+            base = dict(config["IMAGE"])["pixabay_images_path"]
+            path =os.path.join(base,"upload",f"{pic}.jpg")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            img.save(path, format="JPEG")
+
+            cursor.execute("SELECT id FROM image WHERE filepath=%s", (path,))
+            #如果图片已存在，则跳过
+            if cursor.fetchone():
+                continue
+
+            cursor.execute(
+                "INSERT INTO image(filepath, hash) VALUES(%s,%s)",
+                (path, calculate_image_hash(path))
+            )
+            img_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO gallery_image(image_id,gallery_id) VALUES(%s,%s)",
+                (img_id, gallery_id)
+            )
+
+            # 假设 tag 暂不改动
+            img_waiting.append(deal_transparent(img))
+
+        if not img_waiting:
+            conn.rollback()
+            print("No new images to insert.")
+            return
+
+        # 4. 事务先不提交，等待 FAISS 部分也成功
+        # -------------- FAISS 部分 ------------------
+        # 批量预处理 & 编码
+        tensors = [preprocess(im).unsqueeze(0).to(device) for im in img_waiting]
+        with torch.no_grad():
+            embs = [image_model.encode_image(t).cpu().numpy()[0] for t in tensors]
+        embs = np.stack(embs).astype('float32')
+        faiss.normalize_L2(embs)
+
+        # 插入到索引
+        index.add(embs)
+        # -------------------------------------------
+
+        # 5. 全部都成功：提交事务
+        conn.commit()
+        print(f"Inserted {len(img_waiting)} images into DB and FAISS.")
+    except Exception as e:
+        # 任意一步出错，都回滚 DB，并把索引吐回原来的状态
+        conn.rollback()
+        index.reset()
+        if old_ntotal > 0:
+            index.add(old_vectors)
+        print("Error, rolled back DB and FAISS:", e)
+    finally:
+        faiss.write_index(index,"image_vector_db.index")  # 保存 FAISS 索引
+        print("FAISS index saved.")
+        cursor.close()
+        conn.close()
 
 @app.after_request
 def add_cache_headers(response):
@@ -496,7 +617,7 @@ def view_all_liked_images():
     pass
 
 
-def add_user_to_db(username, password):
+def add_user_to_db(username:str, password:str):
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     # 检查用户名是否已存在
@@ -520,6 +641,11 @@ def page_not_found(e):
 
 
 if __name__ == "__main__":
+    
+    #    test_img_insert(
+    #      Image.open("./sample1.jpg")
+    # )  # 测试插入一张图片 
+    # add_user_to_db("admin","passwd")
     # Talisman(app, force_https=True)
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
     app.run(host="0.0.0.0", port=12000, debug=True, threaded=True)

@@ -135,6 +135,41 @@ def search_by_text(text, index, top_k=20):
     return I[0], D[0]  # 返回索引和分数
 
 
+def search_image_by_image(img:Image):
+    """
+    根据输入的图片，使用 OpenCLIP 模型提取嵌入，并在 FAISS 索引中搜索最相似的图片。
+    :param img: 输入的 PIL Image 对象
+    :return: 返回最相似图片的索引和分数
+    """
+    
+    image_model, _, preprocess = open_clip.create_model_and_transforms(
+        "ViT-B-16-plus-240", pretrained="laion400m_e32"
+    )
+    image_model.to(device)
+
+    # 处理调色板图片的透明度
+    if img.mode == "P" and "transparency" in img.info:
+        # 转换为RGBA并创建白色背景
+        img = img.convert("RGBA")
+        background = Image.new("RGBA", img.size, (255, 255, 255))
+        img = Image.alpha_composite(background, img).convert("RGB")
+    else:
+        # 否则直接转换为RGB
+        img = img.convert("RGB")
+
+    # 预处理图片并提取嵌入
+    inputs = preprocess(img).unsqueeze(0).to(device)
+    with torch.no_grad():
+        image_features = image_model.encode_image(inputs)
+    vector = image_features.cpu().numpy()[0]
+    faiss.normalize_L2(vector.reshape(1, -1))
+
+    # 在 FAISS 索引中搜索最相似的图片
+    index = faiss.read_index("image_vector_db.index")
+    D, I = index.search(vector.reshape(1, -1), 20)
+
+    return I[0], D[0]  # 返回索引和分数
+
 if __name__ == "__main__":
     # 示例：处理和保存索引
     import configparser
