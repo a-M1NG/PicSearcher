@@ -4,13 +4,13 @@ import hashlib
 from tqdm import tqdm
 
 # 定义图片文件夹路径列表
-PATHS = ["/home/ming/Pictures/pixabay_images"]
+PATHS = ["./pixabay_images"]
 
 # MySQL数据库配置
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "password",
+    "password": "root123",
     "database": "picSearcher",
 }
 
@@ -18,11 +18,12 @@ DB_CONFIG = {
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor()
 
-
+# get_tags 函数用于获取所有图片的标签
+# 返回值为一个包含所有标签的集合
 def get_tags():
     tags = set()
     for path in PATHS:
-        for root, dirs, files in os.walk(path):
+        for root, _ , files in os.walk(path):
             for filename in files:
                 if (
                     filename.endswith(".jpg")
@@ -32,9 +33,6 @@ def get_tags():
                     or filename.endswith(".jpeg")
                     or filename.endswith(".JPEG")
                 ):
-                    # 获取图片的绝对路径
-                    absolute_path = os.path.abspath(os.path.join(root, filename))
-
                     # 对应的标签文件路径
                     tag_root = os.path.join(root, "tags")
                     tag_file = os.path.join(

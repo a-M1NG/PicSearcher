@@ -31,6 +31,41 @@ def init_models():
 # text_model.to(device)
 
 
+def search_img_by_image(image:Image, index, top_k=20):
+    """
+    使用图片进行检索，返回最相似的图片索引和分数。
+    image: PIL Image 对象
+    index: FAISS 索引对象
+    top_k: 返回的最相似图片数量
+    """
+    image_model, _, preprocess = open_clip.create_model_and_transforms(
+        "ViT-B-16-plus-240", pretrained="laion400m_e32"
+    )
+    image_model.to(device)
+
+    # 处理调色板图片的透明度
+    if image.mode == "P" and "transparency" in image.info:
+        # 转换为RGBA并创建白色背景
+        image = image.convert("RGBA")
+        background = Image.new("RGBA", image.size, (255, 255, 255))
+        image = Image.alpha_composite(background, image).convert("RGB")
+    else:
+        # 否则直接转换为RGB
+        image = image.convert("RGB")
+
+    # 预处理图片并提取嵌入
+    inputs = preprocess(image).unsqueeze(0).to(device)
+    with torch.no_grad():
+        image_features = image_model.encode_image(inputs)
+    
+    vector = image_features.cpu().numpy()[0]
+    faiss.normalize_L2(vector.reshape(1, -1))
+
+    # 在 FAISS 索引中搜索最相似的图片
+    D, I = index.search(vector.reshape(1, -1), top_k)
+
+    return I[0], D[0]  # 返回索引和分数
+
 def get_image_path_by_id(image_id):
 
     query = "SELECT filepath FROM image WHERE id = %s"
