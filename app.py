@@ -76,29 +76,27 @@ def search_by_text(text, index, top_k=20, top_p=0.18):
 def faiss_insert(img, id, index):
     pass
 
+
 def deal_transparent(image):
     if image.mode == "P" and "transparency" in image.info:
-                # 转换为RGBA并创建白色背景
-                image = image.convert("RGBA")
-                background = Image.new("RGBA", image.size, (255, 255, 255))
-                image = Image.alpha_composite(background, image).convert("RGB")
+        # 转换为RGBA并创建白色背景
+        image = image.convert("RGBA")
+        background = Image.new("RGBA", image.size, (255, 255, 255))
+        image = Image.alpha_composite(background, image).convert("RGB")
     return image
 
 
 # 用于测试插入
-def test_img_insert(img:Image):
+def test_img_insert(img: Image):
     vector_index = faiss.read_index("image_vector_db.index")
     insert_imgs([img], ["test_image"], vector_index)
-
-
-
 
 
 def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
     """
     Inserts a batch of images into the FAISS index AND the MySQL DB atomically.
     如果任一步出错，数据库回滚，FAISS 索引恢复到调用前状态。
-    
+
     插入图片到 FAISS 索引和 MySQL 数据库，
     1.imgs 是 PIL Image 对象列表，
     2.pic_names 是图片名称列表。
@@ -123,7 +121,7 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
     if old_ntotal > 0:
         old_vectors = index.reconstruct_n(0, old_ntotal)
     else:
-        old_vectors = np.zeros((0, index.d), dtype='float32')
+        old_vectors = np.zeros((0, index.d), dtype="float32")
 
     # 3. 先把所有图片持久化 & DB 条目插入到事务中
     conn = mysql.connector.connect(**DB_CONFIG)
@@ -143,23 +141,23 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
         for img, name in zip(imgs, pic_names):
             pic = name.strip()
             base = dict(config["IMAGE"])["pixabay_images_path"]
-            path =os.path.join(base,"upload",f"{pic}.jpg")
+            path = os.path.join(base, "upload", f"{pic}.jpg")
             os.makedirs(os.path.dirname(path), exist_ok=True)
             img.save(path, format="JPEG")
 
             cursor.execute("SELECT id FROM image WHERE filepath=%s", (path,))
-            #如果图片已存在，则跳过
+            # 如果图片已存在，则跳过
             if cursor.fetchone():
                 continue
 
             cursor.execute(
                 "INSERT INTO image(filepath, hash) VALUES(%s,%s)",
-                (path, calculate_image_hash(path))
+                (path, calculate_image_hash(path)),
             )
             img_id = cursor.lastrowid
             cursor.execute(
                 "INSERT INTO gallery_image(image_id,gallery_id) VALUES(%s,%s)",
-                (img_id, gallery_id)
+                (img_id, gallery_id),
             )
 
             # 假设 tag 暂不改动
@@ -176,7 +174,7 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
         tensors = [preprocess(im).unsqueeze(0).to(device) for im in img_waiting]
         with torch.no_grad():
             embs = [image_model.encode_image(t).cpu().numpy()[0] for t in tensors]
-        embs = np.stack(embs).astype('float32')
+        embs = np.stack(embs).astype("float32")
         faiss.normalize_L2(embs)
 
         # 插入到索引
@@ -194,10 +192,11 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
             index.add(old_vectors)
         print("Error, rolled back DB and FAISS:", e)
     finally:
-        faiss.write_index(index,"image_vector_db.index")  # 保存 FAISS 索引
+        faiss.write_index(index, "image_vector_db.index")  # 保存 FAISS 索引
         print("FAISS index saved.")
         cursor.close()
         conn.close()
+
 
 @app.after_request
 def add_cache_headers(response):
@@ -617,7 +616,7 @@ def view_all_liked_images():
     pass
 
 
-def add_user_to_db(username:str, password:str):
+def add_user_to_db(username: str, password: str):
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
     # 检查用户名是否已存在
@@ -641,10 +640,10 @@ def page_not_found(e):
 
 
 if __name__ == "__main__":
-    
+
     #    test_img_insert(
     #      Image.open("./sample1.jpg")
-    # )  # 测试插入一张图片 
+    # )  # 测试插入一张图片
     # add_user_to_db("admin","passwd")
     # Talisman(app, force_https=True)
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
