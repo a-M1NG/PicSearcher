@@ -66,70 +66,97 @@ document.getElementById('searchForm').addEventListener('submit', function (event
     window.location.href = `/search/?${params.toString()}`;
 });
 // Show the input area when the + button is clicked
+// 全局变量，用于跟踪当前活动的关闭函数
+let activeCloseListener = null;
+
+// 修正后的 showTagInput 函数
 function showTagInput(imageId) {
-    // Show the input area and focus the input field
-    document.getElementById('tag-input-area-' + imageId).classList.remove('hidden');
-    document.getElementById('new-tag-input-' + imageId).focus();
+    const inputArea = document.getElementById('tag-input-area-' + imageId);
+    const addButton = document.getElementById('add-tag-btn-' + imageId);
+    const newTagInput = document.getElementById('new-tag-input-' + imageId);
 
-    // Hide the + button
-    document.getElementById('add-tag-btn-' + imageId).classList.add('opacity-0');
-    document.getElementById('add-tag-btn-' + imageId).classList.add('hidden');
-    document.getElementById('add-tag-btn-' + imageId).classList.remove('group-hover/tag-area:opacity-100');
+    // 如果之前有活动的监听器，先移除它
+    if (activeCloseListener) {
+        document.removeEventListener('click', activeCloseListener);
+    }
 
-    // Add event listener to close the input area when clicking outside
-    document.addEventListener('click', function (event) {
-        var inputArea = document.getElementById('tag-input-area-' + imageId);
-        var addButton = document.getElementById('add-tag-btn-' + imageId);
+    // 显示输入区域并聚焦
+    inputArea.classList.remove('hidden');
+    newTagInput.focus();
 
-        // If the click is outside the input area and the button, close the input area
+    // 隐藏"+"按钮
+    addButton.classList.add('hidden');
+
+    // 定义一个具名的关闭函数，以便我们之后可以移除它
+    const handleClickOutside = (event) => {
+        // 如果点击发生在输入区域或添加按钮之外
         if (!inputArea.contains(event.target) && !addButton.contains(event.target)) {
             inputArea.classList.add('hidden');
             addButton.classList.remove('hidden');
-            addButton.classList.add('group-hover/tag-area:opacity-100');
+            // **【核心修复】** 移除监听器，避免内存泄漏和重复绑定
+            document.removeEventListener('click', handleClickOutside);
+            activeCloseListener = null; // 清空引用
         }
-    });
+    };
+
+    // 添加新的监听器
+    document.addEventListener('click', handleClickOutside);
+    // 保存对当前监听器的引用
+    activeCloseListener = handleClickOutside;
 }
+
 
 // Submit the tag
 function submitTag(imageId) {
-    const newTag = document.getElementById('new-tag-input-' + imageId).value.trim();
-    // Validate the tag (only alphanumeric, Chinese characters, or non-empty)
+    const newTagInput = document.getElementById('new-tag-input-' + imageId);
+    const newTag = newTagInput.value.trim();
+
+    // 验证标签
     const tagRegex = /^[a-zA-Z0-9\u4e00-\u9fa5\s]+$/;
-    if (!newTag.trim() || !tagRegex.test(newTag)) {
+    if (!newTag || !tagRegex.test(newTag)) {
         alert('标签无效！请输入有效的标签。');
         return;
     }
 
-    // Send a POST request to add the tag (pseudo code)
     fetch('/add_tag', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            image_id: imageId,
-            tag: newTag
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_id: imageId, tag: newTag })
     })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const container = document.getElementById('image-' + imageId + '-tags');
                 if (container) {
-                    //copy the first tag element to create a new tag element
-                    const tagElement = container.children[0].cloneNode(true);
-                    tagElement.id = `tag-${newTag}-${imageId}`;
-                    tagElement.children[0].innerText = newTag;
-                    tagElement.children[0].setAttribute('onclick', `addTag('${newTag}')`);
-                    tagElement.children[1].setAttribute('onclick', `deleteTag(${imageId}, '${newTag}')`);
-                    //在倒数第一个元素之前插入新元素
-                    container.insertBefore(tagElement, container.children[container.children.length - 1]);
+                    // **【核心修复】**
+                    // 1. 使用模板字符串定义新标签的HTML结构，确保结构始终正确
+                    const newTagHTML = `
+                    <div id="tag-${newTag}-${imageId}" class="flex items-center justify-center relative group/tag-content">
+                        <span class="bg-white h-9 w-auto hover:bg-gray-200 cursor-pointer dark:bg-gray-600 dark:hover:bg-gray-500 smooth--trans text-black dark:text-white px-3 rounded-full text-base font-medium flex justify-center items-center relative"
+                              onclick="addTag('${newTag}')">${newTag}</span>
+                        <button class="absolute -top-2.5 -right-3 flex h-full items-center pr-1 pl-0.5 hidden group-hover/tag-content:block"
+                                onclick="deleteTag(${imageId}, '${newTag}')">
+                            <svg class="w-5 fill-gray-400 text-gray-600 hover:text-gray-600 hover:fill-gray-300 transition-colors duration-300"
+                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                        </button>
+                    </div>`;
+
+                    // 2. 创建一个临时div来将字符串转换为DOM元素
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = newTagHTML.trim();
+                    const newTagElement = tempDiv.firstElementChild;
+
+                    // 3. 在“添加”按钮（也就是最后一个元素）之前插入这个新创建的标签
+                    container.insertBefore(newTagElement, container.lastElementChild);
                 }
             } else {
                 if (data.duplicate) {
                     alert('标签已存在，请勿重复添加');
-                } else
+                } else {
                     alert('标签添加失败，请稍后再试');
+                }
             }
         })
         .catch(error => {
@@ -137,11 +164,18 @@ function submitTag(imageId) {
             alert('发生错误，请稍后再试');
         });
 
-    // Clear and hide the input area
-    document.getElementById('new-tag-input-' + imageId).value = '';
-    document.getElementById('tag-input-area-' + imageId).classList.add('hidden');
-    document.getElementById('add-tag-btn-' + imageId).classList.remove('hidden');
-    document.getElementById('add-tag-btn-' + imageId).classList.add('group-hover/tag-area:opacity-100');
+    // 清理并隐藏输入区域
+    newTagInput.value = '';
+    const inputArea = document.getElementById('tag-input-area-' + imageId);
+    const addButton = document.getElementById('add-tag-btn-' + imageId);
+    inputArea.classList.add('hidden');
+    addButton.classList.remove('hidden');
+    addButton.classList.add('group-hover/tag-area:opacity-100');
+
+    if (activeCloseListener) {
+        document.removeEventListener('click', activeCloseListener);
+        activeCloseListener = null;
+    }
 }
 
 function deleteTag(imageID, tagName) {
