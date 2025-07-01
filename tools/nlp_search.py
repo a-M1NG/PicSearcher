@@ -1,5 +1,7 @@
 import sqlite3
 import os
+
+os.environ["HF_HOME"] = "~/.cache/huggingface"
 from PIL import Image
 import numpy as np
 import torch
@@ -185,7 +187,10 @@ if __name__ == "__main__":
     # print(DB_CONFIG)
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor()
-    uid_list = [i for i in range(1, 2420)]  # 替换为实际的 UID 列表
+    q = "SELECT MAX(id) FROM image"
+    cursor.execute(q)
+    max_id = cursor.fetchone()[0]
+    uid_list = [i for i in range(1, max_id + 1)]  # 生成 UID 列表
     db_path = "image_vector_db.db"  # SQLite 数据库路径
     index_path = "image_vector_db.index"  # FAISS 索引文件路径
 
