@@ -185,12 +185,12 @@
         {% if images %}
         <div class="ml-4 flex font-semibold">
             {% if current_page > 1 %}
-            <a href="{{ url_for('search', **dict(request.args, page=current_page-1)) }}"
+            <a href="{{ url_for(search_endpoint, **dict(request.args, page=current_page-1)) }}"
                 class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">上一页</a>
             {% endif %}
             {% if total_pages > 5 %}
             {% if current_page > 2 %}
-            <a href="{{ url_for('search', **dict(request.args, page=1)) }}"
+            <a href="{{ url_for(search_endpoint, **dict(request.args, page=1)) }}"
                 class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">1</a>
             {% if current_page > 3 %}
             <span class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
@@ -200,7 +200,7 @@
             {% if page_num == current_page %}
             <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
             {% else %}
-            <a href="{{ url_for('search', **dict(request.args, page=page_num)) }}"
+            <a href="{{ url_for(search_endpoint, **dict(request.args, page=page_num)) }}"
                 class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{
                 page_num }}</a>
             {% endif %}
@@ -208,7 +208,7 @@
             {% if current_page < total_pages - 2 %} {% if current_page < total_pages - 3 %} <span
                 class="px-3 py-1 mx-1 bg-gray-200 rounded">...</span>
                 {% endif %}
-                <a href="{{ url_for('search', **dict(request.args, page=total_pages)) }}"
+                <a href="{{ url_for(search_endpoint, **dict(request.args, page=total_pages)) }}"
                     class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ total_pages }}</a>
                 {% endif %}
                 {% else %}
@@ -216,20 +216,19 @@
                 {% if page_num == current_page %}
                 <div class="px-3 py-1 mx-1 bg-blue-400 text-white rounded">{{ page_num }}</div>
                 {% else %}
-                <a href="{{ url_for('search', **dict(request.args, page=page_num)) }}"
+                <a href="{{ url_for(search_endpoint, **dict(request.args, page=page_num)) }}"
                     class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">{{ page_num }}</a>
                 {% endif %}
                 {% endfor %}
                 {% endif %}
                 {% if current_page < total_pages %} <a
-                    href="{{ url_for('search', **dict(request.args, page=current_page+1)) }}"
+                    href="{{ url_for(search_endpoint, **dict(request.args, page=current_page+1)) }}"
                     class="px-3 py-1 mx-1 bg-gray-200 rounded hover:bg-blue-300">下一页</a>
                     {% endif %}
 
         </div>
-        <!-- Jump to page input -->
         {% if total_pages > 1 %}
-        <form action="{{ url_for('search') }}" method="get" class="ml-4 mt-2">
+        <form action="{{ url_for(search_endpoint) }}" method="get" class="ml-4 mt-2">
             {% for key, value in request.args.items() %}
             {% if key != 'page' %}
             <input type="hidden" name="{{ key }}" value="{{ value }}">
@@ -241,7 +240,6 @@
         </form>
         {% endif %}
         {% endif %}
-        <!-- Copyright -->
         <div class="mt-2">
             <a href="#" class="text-gray-400 font-semibold hover:underline hover:text-blue-400">© M1NG</a>
         </div>
