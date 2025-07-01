@@ -32,6 +32,13 @@ IMAGE_EXTENSIONS = [
     ".WEBP",
     ".BMP",
 ]
+try:
+    conn = mysql.connector.connect(**DB_CONFIG)
+    conn.close()
+except mysql.connector.Error as err:
+    print(f"Error: {err}")
+    print("请检查数据库配置是否正确")
+    exit(1)
 
 
 # 用户表单
