@@ -1,3 +1,5 @@
+import glob
+from pydoc import text
 from flask import (
     Flask,
     jsonify,
@@ -23,6 +25,7 @@ import os
 from tqdm import trange
 from modules import *
 from werkzeug.serving import WSGIRequestHandler
+from werkzeug.utils import secure_filename
 import faiss
 import torch
 import open_clip
@@ -34,13 +37,15 @@ app = Flask(__name__)
 vector_index = faiss.read_index("image_vector_db.index")
 from multilingual_clip import pt_multilingual_clip
 import transformers
+import traceback
 
 text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
-    "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+    "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
 )
 tokenizer = transformers.AutoTokenizer.from_pretrained(
-    "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus"
+    "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
 )
+print(text_model is None)
 print("faiss index loaded")
 print("ready to perform nlp search")
 
@@ -56,6 +61,15 @@ ALL_GALLERIES = get_all_galleries()
 
 def search_by_text(text, index, top_k=20, top_p=0.18):
     # 使用 tokenizer 生成 tokenized 输入，并转移到相同的设备
+    global text_model, tokenizer
+    if text_model is None or tokenizer is None:
+        print("重新加载 M-CLIP 模型和 tokenizer")
+        text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
+            "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
+        )
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
+        )
     with torch.no_grad():
         res = text_model.forward(text, tokenizer)
     # 将向量转换为 numpy 数组，并提取第一维的向量
@@ -73,8 +87,41 @@ def search_by_text(text, index, top_k=20, top_p=0.18):
     # return I[0], D[0]
 
 
-def faiss_insert(img, id, index):
-    pass
+def search_image_by_image(img: Image):
+    """
+    根据输入的图片，使用 OpenCLIP 模型提取嵌入，并在 FAISS 索引中搜索最相似的图片。
+    :param img: 输入的 PIL Image 对象
+    :return: 返回最相似图片的索引和分数
+    """
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    image_model, _, preprocess = open_clip.create_model_and_transforms(
+        "ViT-B-16-plus-240", pretrained="laion400m_e32"
+    )
+    image_model.to(device)
+
+    # 处理调色板图片的透明度
+    if img.mode == "P" and "transparency" in img.info:
+        # 转换为RGBA并创建白色背景
+        img = img.convert("RGBA")
+        background = Image.new("RGBA", img.size, (255, 255, 255))
+        img = Image.alpha_composite(background, img).convert("RGB")
+    else:
+        # 否则直接转换为RGB
+        img = img.convert("RGB")
+
+    # 预处理图片并提取嵌入
+    inputs = preprocess(img).unsqueeze(0).to(device)
+    with torch.no_grad():
+        image_features = image_model.encode_image(inputs)
+    vector = image_features.cpu().numpy()[0]
+    faiss.normalize_L2(vector.reshape(1, -1))
+
+    # 在 FAISS 索引中搜索最相似的图片
+    index = faiss.read_index("image_vector_db.index")
+    D, I = index.search(vector.reshape(1, -1), 20)
+
+    return I[0], D[0]
 
 
 def deal_transparent(image):
@@ -84,12 +131,6 @@ def deal_transparent(image):
         background = Image.new("RGBA", image.size, (255, 255, 255))
         image = Image.alpha_composite(background, image).convert("RGB")
     return image
-
-
-# 用于测试插入
-def test_img_insert(img: Image):
-    vector_index = faiss.read_index("image_vector_db.index")
-    insert_imgs([img], ["test_image"], vector_index)
 
 
 def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
@@ -102,6 +143,10 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
     2.pic_names 是图片名称列表。
     3.index 是 向量数据库对象
     """
+    # 节省内存
+    global text_model, tokenizer
+    text_model = None
+    tokenizer = None
     # 1. 准备 CLIP 模型和预处理
     image_model, _, preprocess = open_clip.create_model_and_transforms(
         "ViT-B-16-plus-240", pretrained="laion400m_e32"
@@ -141,7 +186,7 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
         for img, name in zip(imgs, pic_names):
             pic = name.strip()
             base = dict(config["IMAGE"])["pixabay_images_path"]
-            path = os.path.join(base, "upload", f"{pic}.jpg")
+            path = os.path.join("./upload", f"{pic}.jpg")
             os.makedirs(os.path.dirname(path), exist_ok=True)
             img.save(path, format="JPEG")
 
@@ -184,6 +229,8 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
         # 5. 全部都成功：提交事务
         conn.commit()
         print(f"Inserted {len(img_waiting)} images into DB and FAISS.")
+        global ALL_GALLERIES
+        ALL_GALLERIES = get_all_galleries()
     except Exception as e:
         # 任意一步出错，都回滚 DB，并把索引吐回原来的状态
         conn.rollback()
@@ -196,6 +243,172 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
         print("FAISS index saved.")
         cursor.close()
         conn.close()
+        text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
+            "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
+        )
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
+        )
+
+
+@app.route("/upload_images", methods=["POST"])
+@login_required
+def upload_images():
+    # 1. 从请求中获取文件列表
+    uploaded_files = request.files.getlist("images")
+
+    if not uploaded_files:
+        return jsonify({"status": "error", "message": "没有选择任何文件。"}), 400
+
+    pil_images = []
+    pic_names = []
+
+    # 2. 将上传的文件转换为 PIL Image 对象和安全的文件名
+    for file in uploaded_files:
+        if file and file.filename:
+            try:
+                # 使用 Pillow 打开图片
+                img = Image.open(file.stream).convert("RGB")
+                pil_images.append(img)
+
+                # 使用 werkzeug 提供的函数来获取安全的文件名，并去除扩展名
+                # 例如: 'My Cool Picture.jpg' -> 'My_Cool_Picture'
+                base_filename = os.path.splitext(secure_filename(file.filename))[0]
+                pic_names.append(base_filename)
+
+            except Exception as e:
+                print(f"无法处理文件 {file.filename}: {e}")
+                # 如果一个文件有问题，可以跳过它或返回错误
+                continue
+
+    if not pil_images:
+        return jsonify({"status": "error", "message": "所有文件都无法处理。"}), 400
+
+    try:
+        # 3. 调用您提供的核心函数
+        # 注意：您需要确保 faiss 索引对象 `vector_index` 在这里是可访问的
+        insert_imgs(imgs=pil_images, pic_names=pic_names, index=vector_index)
+
+        message = f"成功处理并上传了 {len(pil_images)} 张图片。"
+        return jsonify({"status": "success", "message": message}), 200
+
+    except Exception as e:
+        # insert_imgs 内部有自己的异常处理和回滚逻辑，但我们在这里捕获以防万一
+        print(f"调用 insert_imgs 时发生未知错误: {e}")
+        return jsonify({"status": "error", "message": f"服务器内部错误: {e}"}), 500
+
+
+def search_image_by_image(img: Image):
+    """
+    根据输入的图片，使用 OpenCLIP 模型提取嵌入，并在 FAISS 索引中搜索最相似的图片。
+    :param img: 输入的 PIL Image 对象
+    :return: 返回最相似图片的索引和分数
+    """
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    image_model, _, preprocess = open_clip.create_model_and_transforms(
+        "ViT-B-16-plus-240", pretrained="laion400m_e32"
+    )
+    image_model.to(device)
+
+    # 处理调色板图片的透明度
+    if img.mode == "P" and "transparency" in img.info:
+        # 转换为RGBA并创建白色背景
+        img = img.convert("RGBA")
+        background = Image.new("RGBA", img.size, (255, 255, 255))
+        img = Image.alpha_composite(background, img).convert("RGB")
+    else:
+        # 否则直接转换为RGB
+        img = img.convert("RGB")
+
+    # 预处理图片并提取嵌入
+    inputs = preprocess(img).unsqueeze(0).to(device)
+    with torch.no_grad():
+        image_features = image_model.encode_image(inputs)
+    vector = image_features.cpu().numpy()[0]
+    faiss.normalize_L2(vector.reshape(1, -1))
+
+    # 在 FAISS 索引中搜索最相似的图片
+    index = faiss.read_index("image_vector_db.index")
+    D, I = index.search(vector.reshape(1, -1), 20)
+
+    return I[0], D[0]
+
+
+# 将原来的 /search_img 路由替换为以下版本
+@app.route("/search_img", methods=["GET", "POST"])  # 1. 同时允许 GET 和 POST
+@login_required
+def search_img():
+    global latest_results, latest_search_tags
+
+    # 2. 处理初始的图片上传
+    if request.method == "POST":
+        uploaded_file = request.files.get("image")
+        if not uploaded_file or uploaded_file.filename == "":
+            return redirect(url_for("index"))
+
+        try:
+            img = Image.open(uploaded_file.stream).convert("RGB")
+            idxs, scores = search_image_by_image(img)
+            latest_results = [get_image_hash_by_id(i + 1) for i in idxs]
+            latest_search_tags = "[相似图片搜索结果]"
+            session["NLP_MATCH"] = False
+            session["EXACTMATCH"] = False
+            # 3. 关键改动：重定向到GET路由，这为分页创建了一个干净的URL
+            return redirect(url_for("search_img"))
+        except Exception as e:
+            print(f"Error during image search: {e}")
+            return redirect(url_for("index"))
+
+    # 4. 处理分页请求 (GET)
+    # 这段代码现在会处理初始重定向和所有后续的分页点击
+    page = request.args.get("page", 1, type=int)
+    per_page = IMG_PER_PG
+
+    total_images = len(latest_results)
+    if total_images == 0:
+        return render_template(
+            "results.html",
+            images=None,
+            Username=current_user.username,
+            init_tags=latest_search_tags,
+            darkmode=session.get("DarkMode", True),
+            search_endpoint="search_img",  # 传递端点名称
+        )
+
+    total_pages = (total_images + per_page - 1) // per_page
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    images_paginated = latest_results[start_idx:end_idx]
+
+    images = [
+        MImage(
+            image_id,
+            get_image_tags(image_id),
+            get_image_id_by_hash(image_id),
+            is_user_like(get_image_id_by_hash(image_id), current_user.id),
+        )
+        for image_id in images_paginated
+    ]
+
+    start_page = max(page - 1, 1)
+    end_page = min(page + 1, total_pages)
+
+    return render_template(
+        "results.html",
+        images=images,
+        Username=current_user.username,
+        init_tags=latest_search_tags,
+        exactmatch=False,
+        nlpsearch=False,
+        phoneua=session.get("PHONEUA", False),
+        current_page=page,
+        total_pages=total_pages,
+        start_page=start_page,
+        end_page=end_page,
+        total_count=total_images,
+        darkmode=session.get("DarkMode", True),
+        search_endpoint="search_img",  # 5. 告诉模板当前是图片搜索的分页
+    )
 
 
 @app.after_request
@@ -274,11 +487,14 @@ def search():
             try:
                 idxs, scores = search_by_text(tags, vector_index, TOP_K, TOP_P)
                 latest_results = [get_image_hash_by_id(i + 1) for i in idxs]
+                # remove None
+                latest_results = [i for i in latest_results if i is not None]
                 print(
                     f"res: {[(int(idxs[i]),float(scores[i])) for i in range(len(idxs))]}"
                 )
             except Exception as e:
                 print("自然语言搜索失败，已切换回标签搜索", e)
+                print("".join(traceback.format_tb(e.__traceback__)))
                 session["NLP_MATCH"] = False
                 latest_results = search_images_by_tags(tags.split(","), exact_match)
         else:
@@ -331,6 +547,7 @@ def search():
         total_count=total_images,  # 总图片数量
         darkmode=session.get("DarkMode", True),
         nlpsearch=session.get("NLP_MATCH", False),
+        search_endpoint="search",
     )
 
 
@@ -647,4 +864,4 @@ if __name__ == "__main__":
     # add_user_to_db("admin","passwd")
     # Talisman(app, force_https=True)
     WSGIRequestHandler.protocol_version = "HTTP/1.1"
-    app.run(host="0.0.0.0", port=12000, debug=True, threaded=True)
+    app.run(host="localhost", port=12000, debug=True, threaded=True)
