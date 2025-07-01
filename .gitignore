@@ -50,3 +50,5 @@ env/
 venv/
 ENV/
 venv.bak/
+
+upload/
