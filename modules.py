@@ -181,7 +181,12 @@ def get_image_hash_by_id(image_id):
     cursor = conn.cursor()
     query = "SELECT hash FROM image WHERE id = %s"
     cursor.execute(query, (str(image_id),))
-    return cursor.fetchone()[0]  # 返回图片hash
+    # 如果没有找到图片，返回None
+    result = cursor.fetchone()
+    res = result[0] if result else None
+    conn.close()
+    cursor.close()
+    return res  # 返回图片hash
 
 
 def calculate_image_hash(image_id):
