@@ -45,6 +45,9 @@ text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
 tokenizer = transformers.AutoTokenizer.from_pretrained(
     "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
 )
+image_model, _, preprocess = open_clip.create_model_and_transforms(
+    "ViT-B-16-plus-240", pretrained="laion400m_e32"
+)
 print(text_model is None)
 print("faiss index loaded")
 print("ready to perform nlp search")
@@ -143,15 +146,9 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
     2.pic_names 是图片名称列表。
     3.index 是 向量数据库对象
     """
-    # 节省内存
-    global text_model, tokenizer
-    text_model = None
-    tokenizer = None
     # 1. 准备 CLIP 模型和预处理
-    image_model, _, preprocess = open_clip.create_model_and_transforms(
-        "ViT-B-16-plus-240", pretrained="laion400m_e32"
-    )
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    global image_model, preprocess
     image_model = image_model.to(device)
 
     # 校验入参
@@ -243,12 +240,6 @@ def insert_imgs(imgs: list, pic_names: list, index: faiss.IndexFlatIP):
         print("FAISS index saved.")
         cursor.close()
         conn.close()
-        text_model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
-            "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
-        )
-        tokenizer = transformers.AutoTokenizer.from_pretrained(
-            "M-CLIP/XLM-Roberta-Large-Vit-B-16Plus", local_files_only=True
-        )
 
 
 @app.route("/upload_images", methods=["POST"])
@@ -305,9 +296,7 @@ def search_image_by_image(img: Image):
     :return: 返回最相似图片的索引和分数
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    image_model, _, preprocess = open_clip.create_model_and_transforms(
-        "ViT-B-16-plus-240", pretrained="laion400m_e32"
-    )
+    global image_model, preprocess
     image_model.to(device)
 
     # 处理调色板图片的透明度
