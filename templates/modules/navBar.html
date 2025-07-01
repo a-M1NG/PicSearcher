@@ -36,6 +36,19 @@
                 </a>
             </li>
             <li>
+                <a id="uploadTrigger" href="#"
+                    class="flex items-center text-black dark:text-white font-semibold hover:text-gray-600 dark:hover:text-gray-300 smooth--trans cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6" viewBox="0 -960 960 960" width="48px"
+                        fill="currentColor">
+                        <path
+                            d="M250-160q-86 0-148-62T40-370q0-78 49.5-137.5T217-579q20-97 94-158.5T482-799q113 0 189.5 81.5T748-522v24q72-2 122 46.5T920-329q0 69-50 119t-119 50H510q-24 0-42-18t-18-42v-258l-83 83-43-43 156-156 156 156-43 43-83-83v258h241q45 0 77-32t32-77q0-45-32-77t-77-32h-63v-84q0-89-60.5-153T478-739q-89 0-150 64t-61 153h-19q-62 0-105 43.5T100-371q0 62 43.93 106.5T250-220h140v60H250Zm230-290Z" />
+                    </svg>
+                    <p id="uploadText" class="ml-1">上传</p>
+                </a>
+            </li>
+
+            <input type="file" id="imageUploader" class="hidden" multiple accept="image/jpeg, image/png, image/webp" />
+            <li>
                 <a href="{{ url_for('logout') }}"
                     class="flex items-center text-black dark:text-white font-semibold hover:text-gray-600 dark:hover:text-gray-300 smooth--trans">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -99,4 +112,70 @@
                 d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
         </svg>
     </button>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const uploadTrigger = document.getElementById('uploadTrigger');
+            const imageUploader = document.getElementById('imageUploader');
+            const uploadText = document.getElementById('uploadText');
+
+            if (uploadTrigger) {
+                // 当点击“上传”按钮时，触发隐藏的文件输入框
+                uploadTrigger.addEventListener('click', function (e) {
+                    e.preventDefault(); // 阻止 <a> 标签的默认跳转行为
+                    // 如果正在上传，则不响应点击
+                    if (uploadTrigger.classList.contains('uploading')) {
+                        return;
+                    }
+                    imageUploader.click();
+                });
+            }
+
+            if (imageUploader) {
+                // 当用户选择了文件后
+                imageUploader.addEventListener('change', async function () {
+                    if (this.files.length === 0) {
+                        return; // 没有选择文件
+                    }
+
+                    // 准备 FormData 来打包文件
+                    const formData = new FormData();
+                    for (const file of this.files) {
+                        formData.append('images', file); // 'images' 这个键必须和后端接收时一致
+                    }
+
+                    // 提供视觉反馈：进入上传中状态
+                    uploadTrigger.classList.add('uploading');
+                    uploadText.textContent = '上传中...';
+                    uploadTrigger.style.cursor = 'not-allowed';
+
+                    try {
+                        // 使用 fetch API 发送 POST 请求到后端
+                        const response = await fetch("{{ url_for('upload_images') }}", {
+                            method: 'POST',
+                            body: formData,
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            alert(result.message || '上传成功！');
+                        } else {
+                            throw new Error(result.message || '上传失败，请查看服务器日志。');
+                        }
+
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert(error.message);
+                    } finally {
+                        // 恢复按钮状态
+                        uploadTrigger.classList.remove('uploading');
+                        uploadText.textContent = '上传';
+                        uploadTrigger.style.cursor = 'pointer';
+                        // 清空文件输入框的值，以便用户可以重复上传相同的文件
+                        imageUploader.value = '';
+                    }
+                });
+            }
+        });
+    </script>
 </nav>
